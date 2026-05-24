@@ -1,0 +1,7 @@
+---
+title: "Technical Crochet Patterns"
+---
+
+Welcome to the Technical Crochet Pattern visualization repository.
+
+Here you will find plain-text crochet measurements and stitch descriptions translated into structured R data matrices, visualized using ggplot2.

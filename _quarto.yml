@@ -1,0 +1,20 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Crochet Patterns"
+  description: "Technical crochet pattern visualizations"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: projects/
+        text: Patterns
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    css: styles.css
+    mobile-first: true

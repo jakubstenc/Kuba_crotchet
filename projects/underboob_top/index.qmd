@@ -1,0 +1,82 @@
+---
+title: "Underboob Top"
+date: "2026-05-25"
+format:
+  html:
+    fig-width: 8
+    fig-height: 4
+    fig-responsive: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Stitch Map Visualization
+
+```{r}
+#| label: stitch-map
+library(ggplot2)
+library(dplyr)
+
+# Assuming gauge: 2 HDC stitches = 1 cm
+# Front panel width = 46 cm (92 stitches)
+# Nipple distance = 26 cm (52 stitches apart -> Peaks at X=20 and X=72)
+
+grid <- expand.grid(Stitch = 1:92, Row = 1:25)
+
+grid <- grid %>%
+  mutate(
+    Part = case_when(
+      # The base band (Rows 1 to 4)
+      Row <= 4 ~ "Base Band",
+      
+      # Left Cup: Centers at stitch 20. Width shrinks by 1 on each side per row.
+      Row > 4 & Stitch >= (1 + (Row-4)) & Stitch <= (39 - (Row-4)) ~ "Left Cup",
+      
+      # Right Cup: Centers at stitch 72. Width shrinks by 1 on each side per row.
+      Row > 4 & Stitch >= (53 + (Row-4)) & Stitch <= (91 - (Row-4)) ~ "Right Cup",
+      
+      TRUE ~ "Empty Space"
+    )
+  ) %>%
+  filter(Part != "Empty Space")
+
+# Plotting the stitch map
+ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  scale_fill_manual(values = c("Base Band" = "#2C3E50", "Left Cup" = "#E74C3C", "Right Cup" = "#E74C3C")) +
+  theme_minimal() +
+  coord_fixed(ratio = 1) + # Keeps our stitches square for the visualization
+  labs(
+    title = "Crochet Stitch Map: Underboob Top",
+    subtitle = "1 Tile = 1 Half Double Crochet (HDC)",
+    x = "Stitch Count (Width: 92 sts = ~46cm)", 
+    y = "Row Count (Height)"
+  ) +
+  theme(panel.grid = element_blank())
+```
+
+## Written Pattern
+
+**Gauge:** 2 HDC = 1 cm  
+**Stitches Used:** HDC (Half Double Crochet), Sl St (Slip Stitch), Ch (Chain)
+
+### Base Band
+- **Row 1:** Foundation HDC 92 (or Ch 93, HDC in 2nd ch from hook and each ch across). (92 sts)
+- **Rows 2 - 4:** Ch 1, turn. HDC in each st across. (92 sts)
+
+### Left Cup
+*Worked over the first 39 stitches of the Base Band.*
+
+- **Row 5:** With the right side facing you, skip the first stitch. Attach yarn to the 2nd stitch of the Base Band. Ch 1, HDC in the same st and the next 36 sts. Leave the remaining stitches unworked. (37 sts)
+- **Row 6:** Turn, Sl St into the first st. Ch 1, HDC in the next 35 sts. Leave the last st unworked. (35 sts)
+- **Rows 7 - 23:** Repeat the process from Row 6 (turn, Sl St in the first st, Ch 1, HDC across leaving the last st unworked). Each row will decrease by 2 stitches (1 at the beginning, 1 at the end).
+- **Final Row (Row 23):** 1 HDC remains. Fasten off.
+
+### Right Cup
+*Worked over stitches 53 - 91 of the Base Band (leaving 13 stitches unworked between the cups).*
+
+- **Row 5:** Skip 13 sts after the base of the Left Cup (sts 40-52). Attach yarn to stitch 54. Ch 1, HDC in the same st and the next 36 sts. Leave the last st (st 92) unworked. (37 sts)
+- **Row 6:** Turn, Sl St into the first st. Ch 1, HDC in the next 35 sts. Leave the last st unworked. (35 sts)
+- **Rows 7 - 23:** Repeat the process from Row 6, decreasing by 2 sts per row (skipping the first and last stitch) until 1 stitch remains. Fasten off.
