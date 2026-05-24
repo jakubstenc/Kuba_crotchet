@@ -1,0 +1,37 @@
+[
+  {
+    "objectID": "projects/underboob_top/index.html",
+    "href": "projects/underboob_top/index.html",
+    "title": "Underboob Top",
+    "section": "",
+    "text": "library(ggplot2)\nlibrary(dplyr)\n\n# Assuming gauge: 2 HDC stitches = 1 cm\n# Front panel width = 46 cm (92 stitches)\n# Nipple distance = 26 cm (52 stitches apart -&gt; Peaks at X=20 and X=72)\n\ngrid &lt;- expand.grid(Stitch = 1:92, Row = 1:25)\n\ngrid &lt;- grid %&gt;%\n  mutate(\n    Part = case_when(\n      # The base band (Rows 1 to 4)\n      Row &lt;= 4 ~ \"Base Band\",\n      \n      # Left Cup: Centers at stitch 20. Width shrinks by 1 on each side per row.\n      Row &gt; 4 & Stitch &gt;= (1 + (Row-4)) & Stitch &lt;= (39 - (Row-4)) ~ \"Left Cup\",\n      \n      # Right Cup: Centers at stitch 72. Width shrinks by 1 on each side per row.\n      Row &gt; 4 & Stitch &gt;= (53 + (Row-4)) & Stitch &lt;= (91 - (Row-4)) ~ \"Right Cup\",\n      \n      TRUE ~ \"Empty Space\"\n    )\n  ) %&gt;%\n  filter(Part != \"Empty Space\")\n\n# Plotting the stitch map\nggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +\n  geom_tile(color = \"white\", linewidth = 0.2) +\n  scale_fill_manual(values = c(\"Base Band\" = \"#2C3E50\", \"Left Cup\" = \"#E74C3C\", \"Right Cup\" = \"#E74C3C\")) +\n  theme_minimal() +\n  coord_fixed(ratio = 1) + # Keeps our stitches square for the visualization\n  labs(\n    title = \"Crochet Stitch Map: Underboob Top\",\n    subtitle = \"1 Tile = 1 Half Double Crochet (HDC)\",\n    x = \"Stitch Count (Width: 92 sts = ~46cm)\", \n    y = \"Row Count (Height)\"\n  ) +\n  theme(panel.grid = element_blank())"
+  },
+  {
+    "objectID": "projects/underboob_top/index.html#stitch-map-visualization",
+    "href": "projects/underboob_top/index.html#stitch-map-visualization",
+    "title": "Underboob Top",
+    "section": "",
+    "text": "library(ggplot2)\nlibrary(dplyr)\n\n# Assuming gauge: 2 HDC stitches = 1 cm\n# Front panel width = 46 cm (92 stitches)\n# Nipple distance = 26 cm (52 stitches apart -&gt; Peaks at X=20 and X=72)\n\ngrid &lt;- expand.grid(Stitch = 1:92, Row = 1:25)\n\ngrid &lt;- grid %&gt;%\n  mutate(\n    Part = case_when(\n      # The base band (Rows 1 to 4)\n      Row &lt;= 4 ~ \"Base Band\",\n      \n      # Left Cup: Centers at stitch 20. Width shrinks by 1 on each side per row.\n      Row &gt; 4 & Stitch &gt;= (1 + (Row-4)) & Stitch &lt;= (39 - (Row-4)) ~ \"Left Cup\",\n      \n      # Right Cup: Centers at stitch 72. Width shrinks by 1 on each side per row.\n      Row &gt; 4 & Stitch &gt;= (53 + (Row-4)) & Stitch &lt;= (91 - (Row-4)) ~ \"Right Cup\",\n      \n      TRUE ~ \"Empty Space\"\n    )\n  ) %&gt;%\n  filter(Part != \"Empty Space\")\n\n# Plotting the stitch map\nggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +\n  geom_tile(color = \"white\", linewidth = 0.2) +\n  scale_fill_manual(values = c(\"Base Band\" = \"#2C3E50\", \"Left Cup\" = \"#E74C3C\", \"Right Cup\" = \"#E74C3C\")) +\n  theme_minimal() +\n  coord_fixed(ratio = 1) + # Keeps our stitches square for the visualization\n  labs(\n    title = \"Crochet Stitch Map: Underboob Top\",\n    subtitle = \"1 Tile = 1 Half Double Crochet (HDC)\",\n    x = \"Stitch Count (Width: 92 sts = ~46cm)\", \n    y = \"Row Count (Height)\"\n  ) +\n  theme(panel.grid = element_blank())"
+  },
+  {
+    "objectID": "projects/underboob_top/index.html#written-pattern",
+    "href": "projects/underboob_top/index.html#written-pattern",
+    "title": "Underboob Top",
+    "section": "Written Pattern",
+    "text": "Written Pattern\nGauge: 2 HDC = 1 cm\nStitches Used: HDC (Half Double Crochet), Sl St (Slip Stitch), Ch (Chain)\n\nBase Band\n\nRow 1: Foundation HDC 92 (or Ch 93, HDC in 2nd ch from hook and each ch across). (92 sts)\nRows 2 - 4: Ch 1, turn. HDC in each st across. (92 sts)\n\n\n\nLeft Cup\nWorked over the first 39 stitches of the Base Band.\n\nRow 5: With the right side facing you, skip the first stitch. Attach yarn to the 2nd stitch of the Base Band. Ch 1, HDC in the same st and the next 36 sts. Leave the remaining stitches unworked. (37 sts)\nRow 6: Turn, Sl St into the first st. Ch 1, HDC in the next 35 sts. Leave the last st unworked. (35 sts)\nRows 7 - 23: Repeat the process from Row 6 (turn, Sl St in the first st, Ch 1, HDC across leaving the last st unworked). Each row will decrease by 2 stitches (1 at the beginning, 1 at the end).\nFinal Row (Row 23): 1 HDC remains. Fasten off.\n\n\n\nRight Cup\nWorked over stitches 53 - 91 of the Base Band (leaving 13 stitches unworked between the cups).\n\nRow 5: Skip 13 sts after the base of the Left Cup (sts 40-52). Attach yarn to stitch 54. Ch 1, HDC in the same st and the next 36 sts. Leave the last st (st 92) unworked. (37 sts)\nRow 6: Turn, Sl St into the first st. Ch 1, HDC in the next 35 sts. Leave the last st unworked. (35 sts)\nRows 7 - 23: Repeat the process from Row 6, decreasing by 2 sts per row (skipping the first and last stitch) until 1 stitch remains. Fasten off."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Technical Crochet Patterns",
+    "section": "",
+    "text": "Welcome to the Technical Crochet Pattern visualization repository.\nHere you will find plain-text crochet measurements and stitch descriptions translated into structured R data matrices, visualized using ggplot2."
+  },
+  {
+    "objectID": "projects/index.html",
+    "href": "projects/index.html",
+    "title": "Crochet Patterns",
+    "section": "",
+    "text": "Welcome to the pattern directory.\n\nUnderboob Top"
+  }
+]
