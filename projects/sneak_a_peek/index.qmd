@@ -1,0 +1,106 @@
+---
+title: "Sneak A Peek Top"
+date: "2026-05-25"
+format:
+  html:
+    fig-width: 8
+    fig-height: 4
+    fig-responsive: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Stitch Map Visualization
+
+```{r}
+#| label: stitch-map
+library(ggplot2)
+library(dplyr)
+
+# Gauge: 2 HDC stitches = 1 cm
+# Front panel width = 46 cm (92 stitches)
+
+grid <- expand.grid(Stitch = 1:92, Row = 1:33)
+
+grid <- grid %>%
+  mutate(
+    Part = case_when(
+      Row <= 4 ~ "Base Band",
+      
+      # Left Cup Lower (Rows 5 to 16)
+      # Outer edge shrinks by 1. Inner edge grows by 2.
+      Row > 4 & Row <= 16 & 
+      Stitch >= (1 + (Row-4)) & 
+      Stitch <= (22 + 2*(Row-4)) ~ "Left Cup",
+      
+      # Left Cup Upper (Rows 17 to 32)
+      # Outer edge shrinks by 1. Inner edge shrinks by 1.
+      Row > 16 & 
+      Stitch >= (13 + (Row-16)) & 
+      Stitch <= (46 - (Row-16)) ~ "Left Cup",
+      
+      # Right Cup Lower (Rows 5 to 16)
+      # Inner edge grows by 2. Outer edge shrinks by 1.
+      Row > 4 & Row <= 16 & 
+      Stitch >= (71 - 2*(Row-4)) & 
+      Stitch <= (92 - (Row-4)) ~ "Right Cup",
+      
+      # Right Cup Upper (Rows 17 to 32)
+      # Inner edge shrinks by 1. Outer edge shrinks by 1.
+      Row > 16 & 
+      Stitch >= (47 + (Row-16)) & 
+      Stitch <= (80 - (Row-16)) ~ "Right Cup",
+      
+      TRUE ~ "Empty Space"
+    )
+  ) %>%
+  filter(Part != "Empty Space")
+
+# Plotting the stitch map
+ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  scale_fill_manual(values = c("Base Band" = "#2C3E50", "Left Cup" = "#9B59B6", "Right Cup" = "#9B59B6")) +
+  theme_minimal() +
+  coord_fixed(ratio = 1) + 
+  labs(
+    title = "Crochet Stitch Map: Sneak A Peek Top",
+    subtitle = "1 Tile = 1 Half Double Crochet (HDC) | Diamond Cutout Feature",
+    x = "Stitch Count (Width: 92 sts = ~46cm)", 
+    y = "Row Count (Height)"
+  ) +
+  theme(panel.grid = element_blank())
+```
+
+## Written Pattern
+
+**Gauge:** 2 HDC = 1 cm  
+**Stitches Used:** HDC (Half Double Crochet), Sl St (Slip Stitch), Ch (Chain)
+
+### Base Band
+- **Row 1:** Foundation HDC 92 (or Ch 93, HDC in 2nd ch from hook and each ch across). (92 sts)
+- **Rows 2 - 4:** Ch 1, turn. HDC in each st across. (92 sts)
+
+### Left Cup
+*Worked over the first 22 stitches of the Base Band. The "inner edge" is the side facing the cleavage. The "outer edge" is the armpit side.*
+
+**Lower Cup (Increasing Width):**
+- **Row 5:** With the right side facing you, skip the first stitch (outer edge decrease). Attach yarn to the 2nd stitch. HDC in the next 20 sts. Work 3 HDC in the next st (st 22, the inner edge). Leave the remaining 70 stitches unworked. (23 sts)
+- **Rows 6 - 16:** Turn, Ch 1. On the inner edge, work 3 HDC into the first/last stitch (this increases by 2 sts). On the outer edge, skip the first/last stitch by either slip stitching at the beginning of the row or leaving it unworked at the end (this decreases by 1 st). You will gain a net of 1 st per row. By Row 16, you will have 34 sts.
+
+**Upper Cup (Decreasing Width):**
+- **Rows 17 - 32:** Turn, Sl St into the first st. Ch 1, HDC across, leaving the last st unworked. (Each row decreases by 2 sts, one on each edge).
+- **Final Row (Row 33):** 2 HDC remain. Fasten off, leaving a long tail for the strap.
+
+### Right Cup
+*Worked over stitches 71 - 92 of the Base Band. This leaves a gap of 48 unworked stitches in the middle to form the base of the diamond cutout.*
+
+**Lower Cup (Increasing Width):**
+- **Row 5:** Skip 48 sts from the base of the Left Cup (sts 23-70). Attach yarn to stitch 71 (the inner edge). Work 3 HDC in this first st. HDC in the next 20 sts, leaving the last st (st 92) unworked. (23 sts)
+- **Rows 6 - 16:** Turn, Ch 1. Just like the Left Cup, decrease 1 st on the outer armpit edge (by skipping the first/last stitch), and increase 2 sts on the inner cleavage edge (by working 3 HDC into the first/last stitch). You will gain 1 st per row, ending with 34 sts on Row 16.
+*(Note: At Row 16, the inner edges of both cups will naturally meet in the center above the cutout!)*
+
+**Upper Cup (Decreasing Width):**
+- **Rows 17 - 32:** Turn, Sl St into the first st. Ch 1, HDC across, leaving the last st unworked. (Decreases by 2 sts per row).
+- **Final Row (Row 33):** 2 HDC remain. Fasten off, leaving a long tail for the strap. You may also slip stitch the two cups together where they touch at Row 16 for extra stability.
