@@ -60,7 +60,7 @@ ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
 ## Written Pattern
 
 **Gauge:** 2 HDC = 1 cm  
-**Stitches Used:** HDC (Half Double Crochet), Sl St (Slip Stitch), Ch (Chain)
+**Stitches Used:** [HDC](/vocabulary.qmd#hdc) (Half Double Crochet), [Sl St](/vocabulary.qmd#sl-st) (Slip Stitch), [Ch](/vocabulary.qmd#ch) (Chain)
 
 ### Base Band
 - **Row 1:** Foundation HDC 92 (or Ch 93, HDC in 2nd ch from hook and each ch across). (92 sts)

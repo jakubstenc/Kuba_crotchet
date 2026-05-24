@@ -11,6 +11,8 @@ website:
         text: Home
       - href: projects/
         text: Patterns
+      - href: vocabulary.qmd
+        text: Vocabulary
 
 format:
   html:

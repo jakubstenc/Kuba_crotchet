@@ -35,6 +35,13 @@
     "text": "Welcome to the Technical Crochet Pattern visualization repository.\nHere you will find plain-text crochet measurements and stitch descriptions translated into structured R data matrices, visualized using ggplot2."
   },
   {
+    "objectID": "vocabulary.html",
+    "href": "vocabulary.html",
+    "title": "Crochet Vocabulary & Abbreviations",
+    "section": "",
+    "text": "Welcome to the glossary of terms used across our technical crochet patterns.\n\nStitches & Techniques\n\nHDC (Half Double Crochet)\nA medium-height stitch that is taller than a single crochet but shorter than a double crochet. It creates a solid, slightly textured fabric that is perfect for underboob tops and bralettes as it balances coverage and drape.\n\n\nSl St (Slip Stitch)\nA very flat, low-profile stitch. In these patterns, it is primarily used to move the yarn across the work without adding height, which creates clean, stepped decreases along the armpit edges.\n\n\nCh (Chain)\nThe foundation of crochet. Chains are used to create the starting row, to add height at the beginning of a new row (a turning chain), or to bridge gaps in the fabric (like the center of a keyhole cutout).\n\n\nSt / Sts (Stitch / Stitches)\nThe individual loops or “V” shapes along the top edge of your fabric.\n\n\n\nPattern Anatomy\n\nInner Edge / Cleavage Edge\nThe side of the cup that faces the center of the chest. In our patterns, this edge often features increases to curve the fabric inwards and create coverage.\n\n\nOuter Edge / Armpit Edge\nThe side of the cup that faces your arm. This edge typically features steady decreases to taper the fabric from the base band up to the strap."
+  },
+  {
     "objectID": "projects/sneak_a_peek/index.html",
     "href": "projects/sneak_a_peek/index.html",
     "title": "Keyhole Underboob Top",
