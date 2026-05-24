@@ -32,9 +32,9 @@ grid <- grid %>%
       Row <= 4 ~ "Base Band",
       
       # 2. The Cutout Region (Rows 5 to 14)
-      # Creating the left and right sides, leaving a central 18-stitch gap for the window
-      Row >= 5 & Row <= 14 & Stitch <= 37 ~ "Lower Cup (Left)",
-      Row >= 5 & Row <= 14 & Stitch >= 56 ~ "Lower Cup (Right)",
+      # Creating an arched window. The inner edges taper inwards by 2 stitches per row.
+      Row >= 5 & Row <= 14 & Stitch <= (19 + 2*(Row-5)) ~ "Lower Cup (Left)",
+      Row >= 5 & Row <= 14 & Stitch >= (74 - 2*(Row-5)) ~ "Lower Cup (Right)",
       
       # 3. The Sternum Bridge (Rows 15 to 18)
       # The fabric reconnects above the hole. The outer edges begin to taper in slightly.
@@ -84,12 +84,12 @@ ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
 *You will work the left and right sides separately, leaving an 18-stitch gap in the middle.*
 
 **Left Side:**
-- **Row 5:** With right side facing, Ch 1. HDC in the first 37 sts. Leave the rest unworked. (37 sts)
-- **Rows 6 - 14:** Ch 1, turn. HDC in each st across. (37 sts). Fasten off after Row 14.
+- **Row 5:** With right side facing, Ch 1. HDC in the first 17 sts. Work 3 HDC in the next st (st 18). Leave the rest unworked. (19 sts)
+- **Rows 6 - 14:** Ch 1, turn. On the inner edge (the cleavage side), work 3 HDC into the first or last stitch to increase by 2 sts per row. HDC in each remaining st. By Row 14, you will have grown to 37 sts. Fasten off after Row 14.
 
 **Right Side:**
-- **Row 5:** Skip the next 18 sts of the Base Band (this forms the bottom of the keyhole window). Attach yarn to the 56th stitch. Ch 1, HDC in the same st and the remaining 36 sts. (37 sts)
-- **Rows 6 - 14:** Ch 1, turn. HDC in each st across. (37 sts). Do not fasten off; you will continue from here.
+- **Row 5:** Skip the next 54 sts of the Base Band (this wide gap forms the bottom of the arched keyhole window). Attach yarn to the 74th stitch. Work 3 HDC in the same st. HDC in the remaining 18 sts. (19 sts)
+- **Rows 6 - 14:** Ch 1, turn. Just like the Left Side, work 3 HDC into the stitch on the inner cleavage edge to increase by 2 sts per row. HDC in each remaining st. Do not fasten off; you will continue from here with 37 sts.
 
 ### 3. The Sternum Bridge (Closing the Window)
 - **Row 15:** (Continuing from the right side). Ch 1, turn. Skip the first st. HDC in the next 36 sts of the Right Side. Ch 18 over the keyhole gap. HDC across the 37 sts of the Left Side until 1 st remains. Leave the last st unworked. (90 sts counting the chains)
