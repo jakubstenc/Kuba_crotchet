@@ -5,4 +5,4 @@ title: "Crochet Patterns"
 Welcome to the pattern directory.
 
 - [Underboob Top](underboob_top/index.qmd)
-- [Sneak A Peek Top](sneak_a_peek/index.qmd)
+- [Keyhole Underboob Top](sneak_a_peek/index.qmd)
