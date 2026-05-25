@@ -1,0 +1,127 @@
+---
+title: "Pollen Grain: Succisa pratensis"
+date: "2026-05-25"
+format: 
+  html:
+    toc: true
+    fig-width: 8
+    fig-height: 6
+execute: 
+  echo: false
+  warning: false
+---
+
+## Morphological Visualization
+
+This visualization maps a continuous-round amigurumi sphere. The X-axis represents the stitches centered to form an unwrapped projection of the grain. The red tiles indicate randomly generated coordinates for the echinae (spines), and the dark gaps on Round 12 represent the triporate apertures.
+
+```{r}
+#| label: pollen-map
+library(ggplot2)
+library(dplyr)
+library(purrr)
+library(tidyr)
+
+# 1. Define the amigurumi spherical structure (Rounds and Stitch Counts)
+pattern_structure <- data.frame(
+  Round = 1:23,
+  Total_Stitches = c(6, 12, 18, 24, 30, 36, 42, 42, 42, 42, 
+                     42, 42, 42, 42, 42, 42, 42, 
+                     36, 30, 24, 18, 12, 6)
+)
+
+# 2. Expand into a full stitch-by-stitch grid
+grid <- pattern_structure %>%
+  mutate(Stitch_Number = map(Total_Stitches, ~1:.x)) %>%
+  unnest(Stitch_Number)
+
+# 3. Center the stitches for a 2D "map projection" of the sphere
+grid <- grid %>%
+  group_by(Round) %>%
+  mutate(
+    X_Coord = Stitch_Number - (Total_Stitches / 2) - 0.5,
+    Stitch_Type = "Standard SC"
+  ) %>%
+  ungroup()
+
+# 4. Inject the Botanical Morphology
+set.seed(42) # Keeps the random spines in the exact same spot every time you render
+
+grid <- grid %>%
+  mutate(
+    Stitch_Type = case_when(
+      # The 3 Apertures (Pores) on Round 12, spaced evenly
+      Round == 12 & Stitch_Number %in% c(1:4, 15:18, 29:32) ~ "Aperture (Chain 4 Space)",
+      
+      # Randomly scatter Picots (Echinae) for texture (~15% density)
+      # Excluding the poles and the pores to maintain structural integrity
+      Round > 3 & Round < 21 & runif(n()) < 0.15 ~ "Picot (Echinae)",
+      
+      TRUE ~ Stitch_Type
+    )
+  )
+
+# 5. Visualize the unwrapped pollen grain
+ggplot(grid, aes(x = X_Coord, y = Round, fill = Stitch_Type)) +
+  geom_tile(color = "white", linewidth = 0.2, width = 1, height = 1) +
+  scale_fill_manual(values = c(
+    "Standard SC" = "#D4E6B5",            
+    "Aperture (Chain 4 Space)" = "#2C3E50", 
+    "Picot (Echinae)" = "#E74C3C"         
+  )) +
+  theme_minimal() +
+  coord_fixed(ratio = 1) +
+  labs(
+    title = "Morphology Map: Succisa pratensis",
+    subtitle = "Unwrapped Amigurumi Projection",
+    x = "Centered Stitch Position", 
+    y = "Round Number (Bottom to Top)"
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+```
+
+## The Written Pattern
+
+**Hook:** 3.00mm. Work in continuous spiral rounds. Use a stitch marker to track the start of each round.
+**Note on Echinae:** Wherever you see a red tile on the map above, replace the standard SC with a Picot stitch (CH 3, slip stitch into first CH).
+
+### The Monad (Base & Expansion):
+
+*   **R1:** 6 SC in a magic ring (6)
+*   **R2:** INC in each st around (12)
+*   **R3:** (1 SC, INC) around (18)
+*   **R4:** (2 SC, INC) around (24)
+*   **R5:** (3 SC, INC) around (30)
+*   **R6:** (4 SC, INC) around (36)
+*   **R7:** (5 SC, INC) around (42)
+*   **R8-R11:** SC around (42)
+
+### The Triporate Equator:
+
+*   **R12:** (10 SC, Chain 4 and skip 4 stitches) x 3 times (42)
+*   **R13:** SC around, placing 4 SC directly into each of the three Chain-4 gaps (42)
+*   **R14-R17:** SC around (42)
+
+### Closing the Sphere:
+
+*   **R18:** (5 SC, DEC) around (36)
+*   **R19:** (4 SC, DEC) around (30)
+*   **R20:** (3 SC, DEC) around (24)
+
+    *(Stuff the grain firmly here. Do not overstuff the equator or the pores will bulge).*
+
+*   **R21:** (2 SC, DEC) around (18)
+*   **R22:** (1 SC, DEC) around (12)
+*   **R23:** DEC around (6). Fasten off.
+
+### Detailing the Apertures:
+
+*   **Annulus:** Surface slip-stitch a raised ring tightly around the rim of each of the three R12 holes.
+*   **Operculum:** Weave a loose star-shape of yarn across the center of each hole. Embroider 2 French knots in the center of the web.
+
+### How to use this outdoors:
+When you push this file to your GitHub repo, Quarto will execute the R chunk, plot the specific locations of the randomized spines, and render the mobile-friendly HTML. You can just check your phone, look at the visual map for the current round, and easily spot exactly which stitches need a spike.
