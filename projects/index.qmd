@@ -6,3 +6,4 @@ Welcome to the pattern directory.
 
 - [Underboob Top](underboob_top/index.qmd)
 - [Keyhole Underboob Top](sneak_a_peek/index.qmd)
+- [Men's Classic DC T-Shirt (Size M)](male_dc_shirt/index.qmd)

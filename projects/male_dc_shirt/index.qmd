@@ -1,0 +1,144 @@
+---
+title: "Men's Classic DC T-Shirt (Size M)"
+date: "2026-05-25"
+format:
+  html:
+    fig-width: 8
+    fig-height: 5
+    fig-responsive: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Stitch Map Visualization
+
+```{r}
+#| label: stitch-map
+library(ggplot2)
+library(dplyr)
+
+# Measurements:
+# Base Width: 100 stitches (~50 cm for size M)
+# Height: 60 rows (~72 cm length)
+
+grid <- expand.grid(Stitch = 1:100, Row = 1:60)
+
+grid <- grid %>%
+  mutate(
+    LeftEdge = case_when(
+      Row <= 40 ~ 1,
+      Row == 41 ~ 7,
+      Row == 42 ~ 9,
+      Row == 43 ~ 10,
+      Row >= 44 ~ 11
+    ),
+    RightEdge = case_when(
+      Row <= 40 ~ 100,
+      Row == 41 ~ 94,
+      Row == 42 ~ 92,
+      Row == 43 ~ 91,
+      Row >= 44 ~ 90
+    ),
+    InLeftShoulder = Stitch >= LeftEdge & Stitch <= case_when(
+      Row <= 51 ~ RightEdge,
+      Row == 52 ~ 38,
+      Row == 53 ~ 37,
+      Row == 54 ~ 36,
+      Row == 55 ~ 35,
+      Row >= 56 ~ 34
+    ),
+    InRightShoulder = Stitch <= RightEdge & Stitch >= case_when(
+      Row <= 51 ~ 0,
+      Row == 52 ~ 63,
+      Row == 53 ~ 64,
+      Row == 54 ~ 65,
+      Row == 55 ~ 66,
+      Row >= 56 ~ 67
+    ),
+    Part = case_when(
+      Row <= 4 & Stitch >= LeftEdge & Stitch <= RightEdge ~ "Bottom Hem",
+      Row >= 5 & Row <= 40 & Stitch >= LeftEdge & Stitch <= RightEdge ~ "Main Body",
+      Row >= 41 & Row <= 51 & Stitch >= LeftEdge & Stitch <= RightEdge ~ "Upper Chest",
+      Row >= 52 & Row <= 60 & InLeftShoulder ~ "Left Shoulder",
+      Row >= 52 & Row <= 60 & InRightShoulder ~ "Right Shoulder",
+      TRUE ~ "Empty Space"
+    )
+  ) %>%
+  filter(Part != "Empty Space")
+
+ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
+  geom_tile(color = "white", linewidth = 0.1) +
+  geom_hline(yintercept = 4.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = 40.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = 51.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  annotate("label", x = 50, y = 2.5, label = "Bottom Hem\n100 sts x 4 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 50, y = 22.5, label = "Main Body\n100 sts x 36 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 50, y = 46, label = "Upper Chest (Armhole decreases)\n80 sts wide x 11 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 22, y = 56, label = "Left Shoulder\n24 sts x 9 rows", size = 2.5, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 78, y = 56, label = "Right Shoulder\n24 sts x 9 rows", size = 2.5, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  scale_fill_manual(values = c(
+    "Bottom Hem" = "#2C3E50", 
+    "Main Body" = "#1ABC9C", 
+    "Upper Chest" = "#F39C12",
+    "Left Shoulder" = "#8E44AD",
+    "Right Shoulder" = "#8E44AD"
+  )) +
+  theme_minimal() +
+  coord_fixed(ratio = 0.8) +
+  labs(
+    title = "Stitch Density Map: Men's DC T-Shirt (Size M)",
+    subtitle = "Front Panel (Standard DC)",
+    x = "Stitch Count (Width: 100 sts)", 
+    y = "Row Count (Length: 60 rows)"
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+```
+
+## Written Pattern (Front Panel)
+
+**Gauge:** 2 DC = 1 cm  
+**Stitches Used:** [DC](/vocabulary.qmd#dc) (Double Crochet), [Ch](/vocabulary.qmd#ch) (Chain), DC2Tog (Double Crochet 2 Together)
+
+*Note: This is worked entirely in standard Double Crochet for a classic, breathable t-shirt texture.*
+
+### 1. Bottom Hem
+- **Row 1:** Foundation DC 100. (Or Ch 102, DC in 3rd ch from hook and each ch across). (100 sts)
+- **Rows 2 - 4:** Ch 2, turn, DC across. (100 sts)
+
+### 2. Main Body
+- **Rows 5 - 40:** Ch 2, turn, DC across. You are creating a straight tube until you reach the armpits. (100 sts)
+
+### 3. Upper Chest & Armhole Shaping
+- **Row 41:** Turn, slip stitch across the first 6 sts. Ch 2, DC in the next 88 sts. Leave the last 6 sts unworked. (88 sts)
+- **Row 42:** Ch 2, turn. DC decrease (DC2Tog) across first 2 sts. DC across until last 2 sts. DC2Tog. (86 sts)
+- **Row 43:** Ch 2, turn. DC2Tog across first 2 sts. DC across until last 2 sts. DC2Tog. (84 sts)
+- **Row 44:** Ch 2, turn. DC2Tog across first 2 sts. DC across until last 2 sts. DC2Tog. (82 sts)
+- **Row 45:** Ch 2, turn. DC2Tog across first 2 sts. DC across until last 2 sts. DC2Tog. (80 sts)
+- **Rows 46 - 51:** Ch 2, turn, DC across. The armhole decrease is now complete. (80 sts)
+
+### 4. Shoulders & Neckline
+*You will split the work to form the left and right shoulder straps.*
+
+**Left Shoulder:**
+- **Row 52:** With right side facing, Ch 2, DC across the first 28 sts. Leave the rest unworked. (28 sts)
+- **Row 53:** Ch 2, turn. DC2Tog at the inner neck edge. DC across remaining 26 sts. (27 sts)
+- **Row 54:** Ch 2, turn. DC across 25 sts, DC2Tog at the inner neck edge. (26 sts)
+- **Row 55:** Ch 2, turn. DC2Tog at the inner neck edge. DC across remaining 24 sts. (25 sts)
+- **Row 56:** Ch 2, turn. DC across 23 sts, DC2Tog at the inner neck edge. (24 sts)
+- **Rows 57 - 60:** Ch 2, turn, DC across. Fasten off after Row 60. (24 sts)
+
+**Right Shoulder:**
+- **Row 52:** Skip the 24 center stitches of the neckline. Attach yarn to the 53rd stitch from the left armhole edge (or count 28 sts from the right armhole edge). Ch 2, DC in the 28 sts to the end. (28 sts)
+- **Row 53:** Ch 2, turn. DC across 26 sts, DC2Tog at the inner neck edge. (27 sts)
+- **Row 54:** Ch 2, turn. DC2Tog at the inner neck edge. DC across remaining 25 sts. (26 sts)
+- **Row 55:** Ch 2, turn. DC across 24 sts, DC2Tog at the inner neck edge. (25 sts)
+- **Row 56:** Ch 2, turn. DC2Tog at the inner neck edge. DC across remaining 23 sts. (24 sts)
+- **Rows 57 - 60:** Ch 2, turn, DC across. Fasten off after Row 60. (24 sts)
+
+*Back Panel: Work the back panel identically, but skip the neckline shaping. Simply work Rows 52-60 straight across all 80 stitches. Seam the panels at the shoulders and sides!*
