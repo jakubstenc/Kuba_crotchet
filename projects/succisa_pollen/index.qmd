@@ -64,6 +64,11 @@ grid <- grid %>%
 # 5. Visualize the unwrapped pollen grain
 ggplot(grid, aes(x = X_Coord, y = Round, fill = Stitch_Type)) +
   geom_tile(color = "white", linewidth = 0.2, width = 1, height = 1) +
+  geom_hline(yintercept = 11.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = 17.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  annotate("label", x = 0, y = 6, label = "The Monad\n(Base & Expansion)\nR1 - R11", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 0, y = 14.5, label = "Triporate Equator\nR12 - R17", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 0, y = 20.5, label = "Closing the Sphere\nR18 - R23", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
   scale_fill_manual(values = c(
     "Standard SC" = "#D4E6B5",            
     "Aperture (Chain 4 Space)" = "#2C3E50", 

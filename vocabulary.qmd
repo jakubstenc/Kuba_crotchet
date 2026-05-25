@@ -6,14 +6,41 @@ Welcome to the glossary of terms used across our technical crochet patterns.
 
 ### Stitches & Techniques
 
+#### **[SC]{#sc}** (Single Crochet)
+The most basic crochet stitch, creating a tight and dense fabric. Used extensively in amigurumi to form solid, structured 3D shapes.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+single+crochet)*
+
 #### **[HDC]{#hdc}** (Half Double Crochet)
 A medium-height stitch that is taller than a single crochet but shorter than a double crochet. It creates a solid, slightly textured fabric that is perfect for underboob tops and bralettes as it balances coverage and drape.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+half+double+crochet)*
+
+#### **[DC]{#dc}** (Double Crochet)
+A tall stitch that creates a looser, more flexible fabric compared to SC or HDC. Great for wearables like t-shirts where breathability and drape are desired.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+double+crochet)*
 
 #### **[Sl St]{#sl-st}** (Slip Stitch)
-A very flat, low-profile stitch. In these patterns, it is primarily used to move the yarn across the work without adding height, which creates clean, stepped decreases along the armpit edges.
+A very flat, low-profile stitch. In these patterns, it is primarily used to move the yarn across the work without adding height, which creates clean, stepped decreases along armpit edges, or to finish off a round in amigurumi.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+slip+stitch+crochet)*
 
 #### **[Ch]{#ch}** (Chain)
-The foundation of crochet. Chains are used to create the starting row, to add height at the beginning of a new row (a turning chain), or to bridge gaps in the fabric (like the center of a keyhole cutout).
+The foundation of crochet. Chains are used to create the starting row, to add height at the beginning of a new row (a turning chain), or to bridge gaps in the fabric (like the center of a keyhole cutout or apertures in pollen grains).
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+chain+stitch+crochet)*
+
+#### **[Picot]{#picot}**
+A textured, decorative stitch that creates a small bump or "spike" on the fabric. In our pollen grain pattern, this is used to simulate the botanical echinae (spines). Typically made by chaining 3 and slip stitching into the first chain.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+crochet+picot+stitch)*
+
+#### **[INC]{#inc}** (Increase)
+Working two stitches into the same stitch from the previous row or round. This adds to your total stitch count, expanding the width of the fabric or widening a 3D sphere.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+increase+crochet)*
+
+#### **[DEC]{#dec}** (Decrease / SC2Tog)
+Combining two stitches into one. In amigurumi, this is often done using an "Invisible Decrease" to prevent gaps, effectively narrowing the 3D shape.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+invisible+decrease+amigurumi)*
+
+#### **[DC2Tog]{#dc2tog}** (Double Crochet 2 Together)
+A decrease technique specifically for Double Crochet. It combines two stitches into one, used for shaping armholes or necklines in garments.
+*[Watch YouTube Tutorial](https://www.youtube.com/results?search_query=how+to+dc2tog)*
 
 #### **[St / Sts]{#st}** (Stitch / Stitches)
 The individual loops or "V" shapes along the top edge of your fabric.
