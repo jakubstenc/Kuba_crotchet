@@ -19,40 +19,53 @@ execute:
 library(ggplot2)
 library(dplyr)
 
-# Gauge: 2 HDC stitches = 1 cm
-# Front panel width: 92 stitches
-# Nipple distance: Peaks at X=20 and X=72
+# Measurements:
+# Base: 96 stitches
+# Nipple centers: roughly 26cm apart. 
+# Left center ~ X=24, Right center ~ X=72. Y-axis peak ~ Row 18.
 
-grid <- expand.grid(Stitch = 1:92, Row = 1:35)
+grid <- expand.grid(Stitch = 1:96, Row = 1:30)
 
 grid <- grid %>%
   mutate(
+    # 1. Define the physical shape of the top (reverting to the arched window look)
     Part = case_when(
-      # 1. The Base Band (Solid support under the cutout)
       Row <= 4 ~ "Base Band",
-      
-      # 2. The Cutout Region (Rows 5 to 14)
-      # Creating an arched window. The inner edges taper inwards by 2 stitches per row.
-      Row >= 5 & Row <= 14 & Stitch <= (19 + 2*(Row-5)) ~ "Lower Cup (Left)",
-      Row >= 5 & Row <= 14 & Stitch >= (74 - 2*(Row-5)) ~ "Lower Cup (Right)",
-      
-      # 3. The Sternum Bridge (Rows 15 to 18)
-      # The fabric reconnects above the hole. The outer edges begin to taper in slightly.
-      Row >= 15 & Row <= 18 & Stitch >= (1 + (Row-14)) & Stitch <= (92 - (Row-14)) ~ "Center Bridge",
-      
-      # 4. The Upper Cups (Rows 19 to 35)
-      # Splits back into two triangles tapering up to the neck straps (X=20 and X=72)
-      Row >= 19 & Stitch >= (5 + (Row-18)) & Stitch <= (46 - (Row-18)*0.5) ~ "Upper Cup (Left)",
-      Row >= 19 & Stitch >= (47 + (Row-18)*0.5) & Stitch <= (87 - (Row-18)) ~ "Upper Cup (Right)",
-      
+      Row >= 5 & Row <= 12 & Stitch <= (20 + 2*(Row-5)) ~ "Lower Cup (Left)",
+      Row >= 5 & Row <= 12 & Stitch >= (77 - 2*(Row-5)) ~ "Lower Cup (Right)",
+      Row >= 13 & Row <= 16 & Stitch >= (1 + (Row-12)) & Stitch <= (96 - (Row-12)) ~ "Center Bridge",
+      Row >= 17 & Stitch >= (5 + (Row-16)) & Stitch <= (46 - 1.5*(Row-16)) ~ "Upper Cup (Left)",
+      Row >= 17 & Stitch >= (51 + 1.5*(Row-16)) & Stitch <= (92 - (Row-16)) ~ "Upper Cup (Right)",
       TRUE ~ "Empty Space"
+    ),
+    
+    # 2. Define the stitch type based on location
+    Stitch_Type = case_when(
+      Part == "Empty Space" ~ NA_character_,
+      sqrt((Stitch - 24)^2 + (Row - 18)^2) <= 8 ~ "Dense HDC (Coverage)",
+      sqrt((Stitch - 72)^2 + (Row - 18)^2) <= 8 ~ "Dense HDC (Coverage)",
+      TRUE ~ "Standard DC (Breathable)"
     )
   ) %>%
   filter(Part != "Empty Space")
 
-# Plotting the updated stitch map
-ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
+# Plotting the map
+ggplot(grid, aes(x = Stitch, y = Row, fill = Part, alpha = Stitch_Type)) +
   geom_tile(color = "white", linewidth = 0.2) +
+  # Adding structural boundary lines
+  geom_hline(yintercept = 4.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = 12.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = 16.5, color = "grey40", linetype = "dashed", linewidth = 0.6) +
+  
+  # Adding labels for regions
+  annotate("label", x = 48, y = 2.5, label = "Base Band\n96 sts x 4 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 16, y = 8.5, label = "Left Lower Cup\n8 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 80, y = 8.5, label = "Right Lower Cup\n8 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("text", x = 48, y = 8.5, label = "Keyhole Arch", size = 3, fontface = "italic", color = "grey40") +
+  annotate("label", x = 48, y = 14.5, label = "Center Bridge\n4 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 25, y = 24, label = "Left Upper Cup\n14 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  annotate("label", x = 71, y = 24, label = "Right Upper Cup\n14 rows", size = 3, fontface = "bold", fill = "#FFFFFFCC", label.size = NA) +
+  
   scale_fill_manual(values = c(
     "Base Band" = "#2C3E50", 
     "Lower Cup (Left)" = "#E74C3C", 
@@ -61,47 +74,58 @@ ggplot(grid, aes(x = Stitch, y = Row, fill = Part)) +
     "Upper Cup (Left)" = "#3498DB",
     "Upper Cup (Right)" = "#3498DB"
   )) +
+  scale_alpha_manual(values = c(
+    "Standard DC (Breathable)" = 0.4, 
+    "Dense HDC (Coverage)" = 1
+  )) +
   theme_minimal() +
-  coord_fixed(ratio = 1) + 
+  coord_fixed(ratio = 0.8) +
   labs(
-    title = "Crochet Stitch Map: Keyhole Underboob Top",
-    subtitle = "1 Tile = 1 Half Double Crochet (HDC)",
-    x = "Stitch Count", 
-    y = "Row Count (Bottom to Top)"
+    title = "Stitch Density Map: Keyhole Top",
+    subtitle = "Original Colors with Standard DC vs Dense HDC (Opacity)",
+    x = "Stitch Count (Width: 96 sts)", 
+    y = "Row Count"
   ) +
-  theme(panel.grid = element_blank(), legend.position = "bottom")
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.box = "vertical",
+    legend.title = element_blank()
+  )
 ```
 
 ## Written Pattern
 
-**Gauge:** 2 HDC = 1 cm  
-**Stitches Used:** [HDC](/vocabulary.qmd#hdc) (Half Double Crochet), [Sl St](/vocabulary.qmd#sl-st) (Slip Stitch), [Ch](/vocabulary.qmd#ch) (Chain)
+**Gauge:** Standard DC base with dense HDC coverage zones.  
+**Stitches Used:** [DC](/vocabulary.qmd#dc) (Double Crochet), [HDC](/vocabulary.qmd#hdc) (Half Double Crochet), [Sl St](/vocabulary.qmd#sl-st) (Slip Stitch), [Ch](/vocabulary.qmd#ch) (Chain)
+
+*Note: The pattern primarily uses Double Crochet (DC) for a breathable, looser mesh. However, around the center bust (spanning an 8-stitch radius around X=24 and X=72 on the map, roughly Rows 10-26), you will switch to Half Double Crochet (HDC) to create dense, solid coverage zones. Refer to the density map for the exact placement of HDC stitches row by row.*
 
 ### 1. Base Band
-- **Rows 1 - 4:** Foundation HDC 92. (Or Ch 93, HDC in 2nd ch from hook and each ch across). For rows 2-4: Ch 1, turn, HDC across. (92 sts)
+- **Rows 1 - 4:** Foundation DC 96. (Or Ch 98, DC in 3rd ch from hook and each ch across). For rows 2-4: Ch 2, turn, DC across. (96 sts)
 
 ### 2. The Cutout Region (Sides of the Window)
-*You will work the left and right sides separately, leaving an 18-stitch gap in the middle.*
+*You will work the left and right sides separately to form the arching keyhole.*
 
 **Left Side:**
-- **Row 5:** With right side facing, Ch 1. HDC in the first 17 sts. Work 3 HDC in the next st (st 18). Leave the rest unworked. (19 sts)
-- **Rows 6 - 14:** Ch 1, turn. On the inner edge (the cleavage side), work 3 HDC into the first or last stitch to increase by 2 sts per row. HDC in each remaining st. By Row 14, you will have grown to 37 sts. Fasten off after Row 14.
+- **Row 5:** With right side facing, Ch 2. DC/HDC (following the map for dense zones) in the first 20 sts. Leave the rest unworked. (20 sts)
+- **Rows 6 - 12:** Ch 2, turn. On the inner edge (the cleavage side), increase by 2 sts per row. DC/HDC in each remaining st. By Row 12, you will have grown to 34 sts. Fasten off after Row 12.
 
 **Right Side:**
-- **Row 5:** Skip the next 54 sts of the Base Band (this wide gap forms the bottom of the arched keyhole window). Attach yarn to the 74th stitch. Work 3 HDC in the same st. HDC in the remaining 18 sts. (19 sts)
-- **Rows 6 - 14:** Ch 1, turn. Just like the Left Side, work 3 HDC into the stitch on the inner cleavage edge to increase by 2 sts per row. HDC in each remaining st. Do not fasten off; you will continue from here with 37 sts.
+- **Row 5:** Skip the next 56 sts of the Base Band (this wide gap forms the bottom of the arched keyhole window). Attach yarn to the 77th stitch. Ch 2, DC/HDC in the remaining 20 sts. (20 sts)
+- **Rows 6 - 12:** Ch 2, turn. Increase by 2 sts on the inner cleavage edge per row. DC/HDC in each remaining st. Do not fasten off; you will continue from here with 34 sts.
 
 ### 3. The Sternum Bridge (Closing the Window)
-- **Row 15:** (Continuing from the right side). Ch 1, turn. Skip the first st. HDC in the next 36 sts of the Right Side. Ch 18 over the keyhole gap. HDC across the 37 sts of the Left Side until 1 st remains. Leave the last st unworked. (90 sts counting the chains)
-- **Rows 16 - 18:** Ch 1, turn. Skip the first st. HDC across (working into the HDCs and the chains from the previous row) until 1 st remains. Leave the last st unworked. (Each row decreases by 2 stitches. By Row 18, you will have 84 sts).
+- **Row 13:** (Continuing from the right side). Ch 2, turn. Skip the first st. Work across the 33 sts of the Right Side, chain 28 over the keyhole gap, and work across the 33 sts of the Left Side until 1 st remains. Leave the last st unworked. (94 sts counting the chains)
+- **Rows 14 - 16:** Ch 2, turn. Skip the first st. Work across (incorporating the chains on Row 14) following the density map, until 1 st remains. Leave the last st unworked. Each row decreases by 2 stitches (1 at each edge). By Row 16, you will have 88 sts.
 
 ### 4. The Upper Cups (Triangles)
 *You will split the work again to form the two upper triangles.*
 
 **Left Upper Cup:**
-- **Row 19:** With right side facing, Ch 1. Skip the first st. HDC in the next 40 sts. Leave the rest unworked. (40 sts)
-- **Rows 20 - 35:** Ch 1, turn. Decrease 1 st at the armpit edge (outer edge), and alternate decreasing 0 or 1 st at the cleavage edge (inner edge) to follow the taper of the grid (a ratio of roughly 1:0.5 decreases). Continue until only a few stitches remain for the strap. Fasten off.
+- **Row 17:** With right side facing, attach yarn to the 5th st. Ch 2, work across 40 sts following the density map. (40 sts)
+- **Rows 18 - 30:** Ch 2, turn. Decrease 1 st at the armpit edge (outer edge) every row, and alternate decreasing 1 or 2 sts at the cleavage edge (inner edge) to follow the taper of the grid. Continue until Row 30. Fasten off.
 
 **Right Upper Cup:**
-- **Row 19:** Attach yarn to the 48th stitch (leaving a small gap in the center). Ch 1, HDC in the next 40 sts, leaving the last st unworked. (40 sts)
-- **Rows 20 - 35:** Ch 1, turn. Decrease 1 st at the armpit edge, and alternate decreasing 0 or 1 st at the cleavage edge. Continue until only a few stitches remain. Fasten off.
+- **Row 17:** Attach yarn to the 52nd st. Ch 2, work across 40 sts following the density map. (40 sts)
+- **Rows 18 - 30:** Ch 2, turn. Decrease 1 st at the armpit edge, and alternate decreasing 1 or 2 sts at the cleavage edge. Continue until Row 30. Fasten off.
