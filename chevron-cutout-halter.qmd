@@ -1,0 +1,1196 @@
+---
+title: "Mitered Chevron Cutout Halter Top (Size S/M)"
+subtitle: "Gauge-Parameterized 100% Cotton Halter with 90° Inverted-V Sternum Cutout & Corset Ribbed Band"
+date: "2026-11-25"
+format:
+  html:
+    toc: true
+    fig-width: 10
+    fig-height: 6.5
+    fig-responsive: true
+    code-fold: true
+    code-summary: "Show R setup & trigonometric stitch engine"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Project Overview
+
+This reproducible pattern generates a **Women's Size S/M 100% Cotton Mitered Chevron Halter Top** calibrated for an **~88 cm bust / ~76 cm underbust** (`38.0 cm` front panel baseline + `2 × 14.0 cm` ribbed back extensions + `10.0 cm` corset lace-up gap).
+
+Unlike naive chevron patterns that assume square stitches, every stitch count, short-row turn, blueprint polygon, and yardage estimate on this page is computed dynamically in R from Euclidean trigonometry using the true aspect ratio of half double crochet (`sts/cm != rows/cm`). Edit any gauge or measurement variable in the setup chunk below and re-render with Quarto to recalibrate the entire pattern.
+
+---
+
+## 1. Parameterized R Setup & Trigonometric Stitch Engine
+
+```{r}
+#| label: setup-parameters
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+
+# ==============================================================================
+# 1. TUNABLE GARMENT, YARN & GAUGE PARAMETERS
+# ==============================================================================
+
+# Yarn specifications: Sport weight (#2) 100% cotton (125 m / 50 g)
+yarn_weight_class   <- "Sport (#2) 100% Mercerized/Combed Cotton"
+skein_meters        <- 125.0
+skein_grams         <- 50.0
+meters_per_gram     <- skein_meters / skein_grams
+yardage_buffer      <- 1.15  # +15% safety buffer
+
+# 4-color palette & 2-row stripe sequence (C2 -> C3 -> C4 -> C1)
+palette_df <- tibble::tibble(
+  code = c("C1", "C2", "C3", "C4"),
+  name = c("Forest Green", "Ochre / Mustard", "Cream", "Dusty Rose"),
+  hex  = c("#2E5A36", "#B87B28", "#F3EAD6", "#D99B96"),
+  role = c(
+    "Body stripe 4 + Ribbed band + Cutout border + I-cord straps",
+    "Body stripe 1 + Final collar/armhole sc framing row",
+    "Body stripe 2",
+    "Body stripe 3"
+  )
+)
+stripe_cycle_codes <- c("C2", "C3", "C4", "C1")
+rows_per_stripe    <- 2L
+
+# Hooks (mm)
+hook_body_mm <- 3.0  # Main hdc mitered chevron body
+hook_trim_mm <- 2.5  # sc BLO ribbed band, inner cutout border & 3-st I-cords
+
+# Main body gauge (3.0 mm hook in hdc): 22 sts x 16 rows = 10 x 10 cm
+sts_per_cm  <- 2.2
+rows_per_cm <- 1.6
+
+# Ribbed band & trim gauge (2.5 mm hook in sc BLO): 24 sts x 26 rows = 10 x 10 cm
+band_sts_per_cm  <- 2.4
+band_rows_per_cm <- 2.6
+
+# Target garment geometry (cm) -- calibrated for Size S/M (~76 cm underbust / ~88 cm bust)
+# Cutout tuning guide: 4.5 = modest sternum | 9.0 = deep keyhole | 11.0 = almost-underboob | 12.5 = bold underboob
+front_width_cm       <- 38.0  # Total flat horizontal baseline across front ribs
+cutout_height_cm     <- 11.0  # 90-deg almost-underboob inverted-V cutout (base = 2 * 11.0 = 22.0 cm)
+body_height_cm       <- 21.0  # Top of waistband (y = 0) to flat halter collarbone edge
+neck_flat_width_cm   <- 9.0   # Blunted horizontal top collar width
+band_height_cm       <- 4.5   # Perpendicular sc BLO underbust band height
+band_total_length_cm <- 66.0  # 38 cm front (incl. 22 cm cutout bridge) + 2 x 14 cm back
+back_gap_cm          <- 10.0  # Open corset lace-up gap at center back (66 + 10 = 76 cm)
+icord_length_cm      <- 160.0 # Length of each 3-stitch I-cord strap (x2 straps)
+icord_stitches       <- 3L
+```
+
+### Exact Mitered Trigonometric Engine
+
+Because `hdc` stitches are narrower than they are tall (`1 / sts_per_cm = 0.455 cm` wide vs. `dT = 1 / rows_per_cm = 0.625 cm` perpendicular row thickness), naive `+1` or `+2` increases every row distort the `90°` chevron angle:
+
+- **Perpendicular row thickness:** $dT = 1 / \text{rows\_per\_cm}$. Along a $45^\circ$ chevron leg, advancing perpendicular to the leg by $dT$ shifts the vertical spine peak upward by $\Delta y_{\text{spine}} = dT\sqrt{2}$ and shifts a horizontal $180^\circ$ rib baseline outward by $\Delta x_{\text{rib}} = dT\sqrt{2}$.
+- **90° Center Peak & 180° Rib Baseline Rate:** Projecting the new vertex back onto the previous $45^\circ$ leg yields an exact leg extension of $dT / \tan(45^\circ) = dT$ cm per row at the spine (and likewise $+dT$ cm per row at the flat horizontal rib edge), requiring:
+  $$r_{\text{miter}} = dT \times \text{sts\_per\_cm} = \frac{\text{sts\_per\_cm}}{\text{rows\_per\_cm}} = 1.375 \text{ sts/row/wing}$$
+  Our engine tracks exact cumulative Euclidean arc length with staggered tie-breaking between `+1` (`(1 hdc, ch 1, 1 hdc)`) and `+2` (`(2 hdc, ch 1, 2 hdc)`) so stitch counts never drift by more than `0.5` stitches (`~2 mm`) on any row.
+- **Armhole Side-Bust Pivot Condition:** Decreasing `k` stitches at the row end shortens the leg by $s = k / \text{sts\_per\_cm}$, shifting the outer coordinate by $\Delta x = (dT - s)/\sqrt{2}$ and $\Delta y = (dT + s)/\sqrt{2}$. A single `hdc2tog` (`k = 1`, $s = 0.455\text{ cm} < dT = 0.625\text{ cm}$) actually drifts *outward* ($\Delta x = +0.12\text{ cm/row}$). To pivot strictly **upward and inward** ($\Delta x < 0$), the engine computes $k_{\text{dec}} = \lfloor r_{\text{miter}} \rfloor + 1 = 2$ (`[hdc2tog] 2x` at outer edges, giving $\Delta x = -0.20\text{ cm/row}, \Delta y = +1.08\text{ cm/row}$).
+
+```{r}
+#| label: trigonometric-engine
+build_chevron_halter <- function(
+  sts_per_cm, rows_per_cm, band_sts_per_cm, band_rows_per_cm,
+  front_width_cm, cutout_height_cm, body_height_cm, neck_flat_width_cm,
+  band_height_cm, band_total_length_cm, icord_length_cm,
+  palette_df, stripe_cycle_codes, rows_per_stripe = 2L
+) {
+  # Fundamental differential geometry constants
+  dT         <- 1 / rows_per_cm
+  ds         <- 1 / sts_per_cm
+  step_c     <- dT * sqrt(2)            # Intercept advance along x + y = c per hdc row
+  rate_miter <- dT * sts_per_cm         # Exact sts/row/wing for 90-deg miter & 180-deg base
+
+  # Cutout & Phase 1 foundation geometry
+  cutout_base_cm <- 2 * cutout_height_cm
+  cutout_leg_cm  <- cutout_height_cm * sqrt(2)
+  leg0_sts       <- as.integer(round(cutout_leg_cm * sts_per_cm))
+  fsc_total_sts  <- 2L * leg0_sts + 1L  # Odd count: leg + 1 marked center st + leg
+
+  # Row milestones across phases
+  rib_wing_target_cm <- (front_width_cm - cutout_base_cm) / 2
+  n_rib_rows  <- as.integer(round(rib_wing_target_cm / step_c))
+  n_peak_rows <- as.integer(round((body_height_cm - cutout_height_cm) / step_c))
+  n_neck_rows <- as.integer(round((neck_flat_width_cm / 2) / step_c))
+  n_hdc_rows  <- n_peak_rows + n_neck_rows
+
+  # Minimum outer-edge decrease so dx = (dT - k*ds)/sqrt(2) < 0 (strictly inward taper)
+  dec_outer_sts <- as.integer(floor(rate_miter) + 1L)
+
+  color_lookup <- setNames(
+    paste0(palette_df$code, " (", palette_df$name, ")"),
+    palette_df$code
+  )
+  hex_lookup <- setNames(palette_df$hex, palette_df$code)
+
+  # Initialize state trackers
+  rows_list      <- list()
+  poly_list      <- list()
+  wing_sts       <- leg0_sts
+  cum_peak_exact <- 0.0; cum_peak_int <- 0L
+  cum_rib_exact  <- 0.0; cum_rib_int  <- 0L
+  cum_neck_exact <- 0.0; cum_neck_int <- 0L
+
+  # Row 0: Phase 1 Foundation Arch (fsc framing cutout in C2 so first stripe begins cleanly)
+  first_code <- stripe_cycle_codes[1]
+  rows_list[[1]] <- tibble::tibble(
+    Row              = "Row 0 (Fdn)",
+    row_num          = 0L,
+    Phase            = "Phase 1: Foundation Arch",
+    color_code       = first_code,
+    Color            = color_lookup[[first_code]],
+    Row_Start_Action = paste0("fsc ", leg0_sts, " (right leg)"),
+    Center_Action    = "1 fsc (mark center spine st)",
+    Row_End_Action   = paste0("fsc ", leg0_sts, " (left leg)"),
+    Wing_Sts         = leg0_sts,
+    Total_Sts        = fsc_total_sts,
+    Active_HDC_Equiv = fsc_total_sts
+  )
+
+  # Physical coordinate state for right-half polygons (mirrored to left half x -> -x)
+  y_collar_actual <- cutout_height_cm + n_peak_rows * step_c
+  x_out_bot       <- cutout_height_cm
+  y_out_bot       <- 0.0
+
+  for (r in seq_len(n_hdc_rows)) {
+    c_code <- stripe_cycle_codes[((r - 1L) %/% rows_per_stripe) %% length(stripe_cycle_codes) + 1L]
+    c_bot  <- cutout_height_cm + (r - 1L) * step_c
+    c_top  <- cutout_height_cm + r * step_c
+
+    if (r <= n_rib_rows) {
+      phase_label <- "Phase 2: Rib Baseline"
+      # Staggered rounding tie-breakers keep wing_sts within <= 0.5 st of exact Euclidean length
+      cum_peak_exact <- cum_peak_exact + rate_miter
+      inc_peak       <- as.integer(floor(cum_peak_exact + 0.5)) - cum_peak_int
+      cum_peak_int   <- cum_peak_int + inc_peak
+
+      cum_rib_exact  <- cum_rib_exact + rate_miter
+      inc_rib        <- as.integer(ceiling(cum_rib_exact - 0.5)) - cum_rib_int
+      cum_rib_int    <- cum_rib_int + inc_rib
+
+      wing_sts  <- wing_sts + inc_rib + inc_peak
+      total_sts <- 2L * wing_sts + 1L
+
+      start_act <- sprintf("+%d st (%d hdc in 1st st)", inc_rib, inc_rib + 1L)
+      peak_act  <- sprintf("(%d hdc, ch 1, %d hdc) [+%d/wing]", inc_peak, inc_peak, inc_peak)
+      end_act   <- sprintf("+%d st (%d hdc in last st)", inc_rib, inc_rib + 1L)
+
+      x_in_bot <- 0.0;   y_in_bot <- c_bot
+      x_in_top <- 0.0;   y_in_top <- c_top
+      x_out_top <- c_top; y_out_top <- 0.0
+
+    } else if (r <= n_peak_rows) {
+      phase_label <- "Phase 3: Armhole Taper"
+      cum_peak_exact <- cum_peak_exact + rate_miter
+      inc_peak       <- as.integer(floor(cum_peak_exact + 0.5)) - cum_peak_int
+      cum_peak_int   <- cum_peak_int + inc_peak
+
+      wing_sts  <- wing_sts - dec_outer_sts + inc_peak
+      total_sts <- 2L * wing_sts + 1L
+
+      start_act <- sprintf("-%d sts ([hdc2tog] x%d)", dec_outer_sts, dec_outer_sts)
+      peak_act  <- sprintf("(%d hdc, ch 1, %d hdc) [+%d/wing]", inc_peak, inc_peak, inc_peak)
+      end_act   <- sprintf("-%d sts ([hdc2tog] x%d)", dec_outer_sts, dec_outer_sts)
+
+      x_in_bot  <- 0.0; y_in_bot <- c_bot
+      x_in_top  <- 0.0; y_in_top <- c_top
+      x_out_top <- x_out_bot + (dT - dec_outer_sts * ds) / sqrt(2)
+      y_out_top <- c_top - x_out_top
+
+    } else {
+      phase_label <- "Phase 4: Neck Short Rows"
+      sr_idx      <- r - n_peak_rows
+      cum_neck_exact <- cum_neck_exact + rate_miter
+      dec_neck       <- as.integer(floor(cum_neck_exact + 0.5)) - cum_neck_int
+      cum_neck_int   <- cum_neck_int + dec_neck
+
+      wing_sts  <- wing_sts - dec_outer_sts - dec_neck
+      total_sts <- 2L * wing_sts  # Worked separately on Left & Right shoulders
+
+      if (sr_idx %% 2L == 1L) {
+        # Odd short row: work from outer armhole edge up toward collarbone, stop short
+        start_act <- sprintf("Outer: [hdc2tog] x%d (-%d sts)", dec_outer_sts, dec_outer_sts)
+        peak_act  <- sprintf("Turn %d st(s) before neck edge", dec_neck)
+        end_act   <- "Repeat symm. on 2nd shoulder"
+      } else {
+        # Even short row: sl st down along flat collar, work down to outer armhole decrease
+        start_act <- sprintf("Neck: sl st %d, ch 1 (-%d sts)", dec_neck, dec_neck)
+        peak_act  <- "Center unworked (flat collar)"
+        end_act   <- sprintf("Outer: [hdc2tog] x%d (-%d sts)", dec_outer_sts, dec_outer_sts)
+      }
+
+      x_in_bot  <- c_bot - y_collar_actual; y_in_bot <- y_collar_actual
+      x_in_top  <- c_top - y_collar_actual; y_in_top <- y_collar_actual
+      x_out_top <- x_out_bot + (dT - dec_outer_sts * ds) / sqrt(2)
+      y_out_top <- c_top - x_out_top
+    }
+
+    rows_list[[r + 1L]] <- tibble::tibble(
+      Row              = paste0("Row ", r),
+      row_num          = r,
+      Phase            = phase_label,
+      color_code       = c_code,
+      Color            = color_lookup[[c_code]],
+      Row_Start_Action = start_act,
+      Center_Action    = peak_act,
+      Row_End_Action   = end_act,
+      Wing_Sts         = wing_sts,
+      Total_Sts        = total_sts,
+      Active_HDC_Equiv = total_sts
+    )
+
+    # Store right and mirrored left wing polygons for ggplot2 blueprints
+    poly_list[[2L * r - 1L]] <- tibble::tibble(
+      row_num = r, side = "Right", poly_id = paste0("R_", r),
+      Phase = phase_label, color_code = c_code, hex = hex_lookup[[c_code]],
+      x = c(x_in_bot, x_out_bot, x_out_top, x_in_top),
+      y = c(y_in_bot, y_out_bot, y_out_top, y_in_top)
+    )
+    poly_list[[2L * r]] <- tibble::tibble(
+      row_num = r, side = "Left", poly_id = paste0("L_", r),
+      Phase = phase_label, color_code = c_code, hex = hex_lookup[[c_code]],
+      x = -c(x_in_bot, x_out_bot, x_out_top, x_in_top),
+      y =  c(y_in_bot, y_out_bot, y_out_top, y_in_top)
+    )
+
+    x_out_bot <- x_out_top
+    y_out_bot <- y_out_top
+  }
+
+  # Final Framing Row: 1 continuous row of C2 (Ochre) sc framing both armholes + neckline
+  side_bust_len_cm  <- sqrt((x_out_bot - (cutout_height_cm + n_rib_rows * step_c))^2 + y_out_bot^2)
+  diag_arm_len_cm   <- sqrt((x_out_bot - (c_top - y_collar_actual))^2 + (y_collar_actual - y_out_bot)^2)
+  collar_actual_cm  <- 2 * (c_top - y_collar_actual)
+  armhole_sc_per_sd <- as.integer(round((side_bust_len_cm + diag_arm_len_cm) * sts_per_cm))
+  collar_sc_sts     <- as.integer(round(collar_actual_cm * sts_per_cm))
+  trim_total_sc     <- 2L * armhole_sc_per_sd + collar_sc_sts
+
+  rows_list[[n_hdc_rows + 2L]] <- tibble::tibble(
+    Row              = paste0("Row ", n_hdc_rows + 1L, " (Trim)"),
+    row_num          = n_hdc_rows + 1L,
+    Phase            = "Phase 4: Collar & Armhole Edging",
+    color_code       = "C2",
+    Color            = color_lookup[["C2"]],
+    Row_Start_Action = paste0("RS join at R underarm: ", armhole_sc_per_sd, " sc up R armhole"),
+    Center_Action    = paste0(collar_sc_sts, " sc across flat horizontal neckline"),
+    Row_End_Action   = paste0(armhole_sc_per_sd, " sc down L armhole"),
+    Wing_Sts         = armhole_sc_per_sd,
+    Total_Sts        = trim_total_sc,
+    Active_HDC_Equiv = as.integer(round(trim_total_sc * 0.75))
+  )
+
+  # Perpendicular sc BLO Ribbed Waistband & Cutout Stabilization Calculations (2.5 mm hook, C1)
+  band_width_sts    <- as.integer(round(band_height_cm * band_sts_per_cm))
+  back_ext_cm       <- (band_total_length_cm - front_width_cm) / 2
+  rows_back_ext     <- 2L * as.integer(round((back_ext_cm * band_rows_per_cm) / 2))
+  rows_front_wing   <- 2L * as.integer(round((rib_wing_target_cm * band_rows_per_cm) / 2))
+  rows_cutout_brdg  <- 2L * as.integer(round((cutout_base_cm * band_rows_per_cm) / 2))
+  band_total_rows   <- 2L * rows_back_ext + 2L * rows_front_wing + rows_cutout_brdg
+
+  cutout_leg_sc     <- as.integer(round(cutout_leg_cm * band_sts_per_cm))
+  cutout_base_sc    <- as.integer(round(cutout_base_cm * band_sts_per_cm))
+  cutout_round_sts  <- 2L * (cutout_leg_sc - 1L) + 1L + cutout_base_sc # incl. sc3tog apex
+
+  icord_rows_each   <- as.integer(round(icord_length_cm * band_rows_per_cm))
+
+  list(
+    rows_df           = bind_rows(rows_list),
+    polys_df          = bind_rows(poly_list),
+    dT                = dT,
+    step_c            = step_c,
+    rate_miter        = rate_miter,
+    leg0_sts          = leg0_sts,
+    fsc_total_sts     = fsc_total_sts,
+    n_rib_rows        = n_rib_rows,
+    n_peak_rows       = n_peak_rows,
+    n_neck_rows       = n_neck_rows,
+    n_hdc_rows        = n_hdc_rows,
+    dec_outer_sts     = dec_outer_sts,
+    front_actual_cm   = 2 * (cutout_height_cm + n_rib_rows * step_c),
+    y_collar_actual   = y_collar_actual,
+    collar_actual_cm  = collar_actual_cm,
+    x_underarm_top    = x_out_bot,
+    y_underarm_top    = y_out_bot,
+    armhole_sc_per_sd = armhole_sc_per_sd,
+    collar_sc_sts     = collar_sc_sts,
+    band_width_sts    = band_width_sts,
+    back_ext_cm       = back_ext_cm,
+    rows_back_ext     = rows_back_ext,
+    rows_front_wing   = rows_front_wing,
+    rows_cutout_brdg  = rows_cutout_brdg,
+    band_total_rows   = band_total_rows,
+    cutout_leg_sc     = cutout_leg_sc,
+    cutout_base_sc    = cutout_base_sc,
+    cutout_round_sts  = cutout_round_sts,
+    icord_rows_each   = icord_rows_each
+  )
+}
+
+pat <- build_chevron_halter(
+  sts_per_cm = sts_per_cm, rows_per_cm = rows_per_cm,
+  band_sts_per_cm = band_sts_per_cm, band_rows_per_cm = band_rows_per_cm,
+  front_width_cm = front_width_cm, cutout_height_cm = cutout_height_cm,
+  body_height_cm = body_height_cm, neck_flat_width_cm = neck_flat_width_cm,
+  band_height_cm = band_height_cm, band_total_length_cm = band_total_length_cm,
+  icord_length_cm = icord_length_cm, palette_df = palette_df,
+  stripe_cycle_codes = stripe_cycle_codes, rows_per_stripe = rows_per_stripe
+)
+```
+
+---
+
+## 2. Stitch Map Visualization (Tile Grid)
+
+Matching the `geom_tile` stitch-grid format of the other patterns in this repository, the front panel and bridged base band are mapped onto a discrete `(Stitch, Row)` matrix (`1 Tile = 1 Stitch` across the front panel, colored by actual yarn shade and stitch density zone), followed by an unwrapped row-by-stitch chart for counting directly off your screen.
+
+```{r}
+#| label: stitch-map
+#| fig-width: 9.5
+#| fig-height: 6.2
+#| fig-cap: "Discrete Stitch Map (Front Panel): 1 tile = 1 stitch on the 38 cm front grid, showing the Forest Green base band bridging the empty 90-degree almost-underboob cutout, the 45-degree 2-row mitered chevron stripes, armhole decreases, and flat short-rowed collar."
+
+# Convert garment geometry into discrete front-panel stitch columns & vertical row equivalents
+n_front_sts  <- 2L * as.integer(round((pat$front_actual_cm / 2) * sts_per_cm)) + 1L # odd for center spine col
+center_col   <- (n_front_sts + 1L) %/% 2L
+n_band_rows  <- as.integer(round(band_height_cm * rows_per_cm))
+n_body_vrows <- as.integer(round(pat$y_collar_actual * rows_per_cm)) + 1L
+tot_grid_rows <- n_band_rows + n_body_vrows
+
+# Outer boundary helper at height y_cm above band
+half_collar_cm <- pat$collar_actual_cm / 2
+y_col_cm       <- pat$y_collar_actual
+half_front_cm  <- pat$front_actual_cm / 2
+x_ua_cm        <- pat$x_underarm_top
+y_ua_cm        <- pat$y_underarm_top
+
+grid <- expand.grid(
+  Stitch = seq_len(n_front_sts),
+  Row    = seq_len(tot_grid_rows)
+) %>%
+  mutate(
+    # Physical coordinates (cm) of each discrete stitch tile center
+    x_cm    = (Stitch - center_col) / sts_per_cm,
+    y_cm    = (Row - n_band_rows - 0.5) / rows_per_cm,
+    abs_x   = abs(x_cm),
+    c_diag  = abs_x + y_cm,
+
+    # Maximum outer half-width of the front body at height y_cm
+    max_x_at_y = case_when(
+      y_cm < 0 ~ half_front_cm,
+      y_cm <= y_ua_cm ~ half_front_cm + (x_ua_cm - half_front_cm) * (y_cm / max(y_ua_cm, 0.01)),
+      y_cm <= y_col_cm ~ x_ua_cm + (half_collar_cm - x_ua_cm) * ((y_cm - y_ua_cm) / max(y_col_cm - y_ua_cm, 0.01)),
+      TRUE ~ -1.0
+    ),
+
+    # Chevron row index (1..n_hdc_rows) corresponding to 45-deg coordinate c_diag
+    chev_row = as.integer(ceiling((c_diag - cutout_height_cm) / pat$step_c)),
+    stripe_idx = ((pmax(chev_row, 1L) - 1L) %/% rows_per_stripe) %% length(stripe_cycle_codes) + 1L,
+    chev_code  = stripe_cycle_codes[stripe_idx],
+
+    # Structural region classification
+    Part = case_when(
+      Row <= n_band_rows ~ "Base Band (C1 sc BLO)",
+      y_cm > y_col_cm ~ "Empty Space",
+      abs_x > max_x_at_y ~ "Empty Space",
+      c_diag < cutout_height_cm - 0.35 ~ "Empty Space",
+      c_diag < cutout_height_cm + 0.28 ~ "Cutout Lock Border (C1 sc/sl st)",
+      y_cm >= y_col_cm - (1 / rows_per_cm) & abs_x <= half_collar_cm + 0.35 ~ "Collar & Armhole Trim (C2 sc)",
+      abs_x >= max_x_at_y - 0.48 ~ "Collar & Armhole Trim (C2 sc)",
+      TRUE ~ paste0("Chevron Stripe: ", chev_code)
+    ),
+
+    # Map every active tile to its exact yarn color label
+    Yarn_Shade = case_when(
+      Part == "Empty Space" ~ NA_character_,
+      Part %in% c("Base Band (C1 sc BLO)", "Cutout Lock Border (C1 sc/sl st)") ~ "C1: Forest Green (Band & Cutout Lock)",
+      Part == "Collar & Armhole Trim (C2 sc)" ~ "C2: Ochre / Mustard (Body & Trim)",
+      chev_code == "C1" ~ "C1: Forest Green (Band & Cutout Lock)",
+      chev_code == "C2" ~ "C2: Ochre / Mustard (Body & Trim)",
+      chev_code == "C3" ~ "C3: Cream",
+      chev_code == "C4" ~ "C4: Dusty Rose"
+    )
+  ) %>%
+  filter(Part != "Empty Space")
+
+cutout_top_row <- n_band_rows + as.integer(round(cutout_height_cm * rows_per_cm))
+ua_split_row   <- n_band_rows + as.integer(round(y_ua_cm * rows_per_cm))
+
+ggplot(grid, aes(x = Stitch, y = Row, fill = Yarn_Shade)) +
+  geom_tile(color = "white", linewidth = 0.22) +
+  # Structural phase boundary lines (matching repository pattern style)
+  geom_hline(yintercept = n_band_rows + 0.5, color = "grey35", linetype = "dashed", linewidth = 0.6) +
+  geom_hline(yintercept = cutout_top_row + 0.5, color = "grey45", linetype = "dashed", linewidth = 0.5) +
+  geom_hline(yintercept = tot_grid_rows - 5.5, color = "grey45", linetype = "dashed", linewidth = 0.5) +
+  geom_vline(xintercept = center_col, color = "grey35", linetype = "dotted", linewidth = 0.5) +
+
+  # Region callout labels (matching repository pattern style)
+  annotate(
+    "label", x = center_col, y = (n_band_rows + 1) / 2,
+    label = sprintf("Bridged Ribbed Band (%s sts front span; +2x14 cm back extensions)", n_front_sts),
+    size = 3.0, fontface = "bold", fill = "#FFFFFFDD", label.size = NA
+  ) +
+  annotate(
+    "text", x = center_col, y = n_band_rows + max(3.2, (cutout_top_row - n_band_rows) * 0.36),
+    label = sprintf("Almost-Underboob\n90° Cutout Window\n(%.0f x %.0f cm)", 2 * cutout_height_cm, cutout_height_cm),
+    size = 3.0, fontface = "bold.italic", color = "#1B3821", lineheight = 0.95
+  ) +
+  annotate(
+    "label", x = round(center_col * 0.36), y = n_band_rows + round(n_body_vrows * 0.42),
+    label = "Left Mitered Wing\n(45° bias hdc)",
+    size = 2.9, fontface = "bold", fill = "#FFFFFFCC", label.size = NA
+  ) +
+  annotate(
+    "label", x = n_front_sts - round(center_col * 0.36) + 1, y = n_band_rows + round(n_body_vrows * 0.42),
+    label = "Right Mitered Wing\n(45° bias hdc)",
+    size = 2.9, fontface = "bold", fill = "#FFFFFFCC", label.size = NA
+  ) +
+  annotate(
+    "label", x = center_col, y = cutout_top_row + round((tot_grid_rows - 5 - cutout_top_row) * 0.55),
+    label = "90° Center Spine\n(+1 / +2 inc)",
+    size = 2.8, fontface = "bold", fill = "#FFFFFFCC", label.size = NA
+  ) +
+  annotate(
+    "label", x = center_col, y = tot_grid_rows - 2.2,
+    label = sprintf("Short-Row Flat Collar (%.0f cm)", neck_flat_width_cm),
+    size = 2.8, fontface = "bold", fill = "#FFFFFFDD", label.size = NA
+  ) +
+
+  scale_fill_manual(values = c(
+    "C1: Forest Green (Band & Cutout Lock)" = "#2E5A36",
+    "C2: Ochre / Mustard (Body & Trim)"     = "#B87B28",
+    "C3: Cream"                             = "#F3EAD6",
+    "C4: Dusty Rose"                        = "#D99B96"
+  )) +
+  theme_minimal(base_size = 11) +
+  coord_fixed(ratio = sts_per_cm / rows_per_cm) +
+  labs(
+    title    = "Crochet Stitch Map: Mitered Chevron Almost-Underboob Halter",
+    subtitle = sprintf("Front Panel Grid (%d sts = ~%.0f cm wide) | 1 Tile = 1 Stitch Footprint", n_front_sts, front_width_cm),
+    x        = sprintf("Stitch Column (Front Width: %d sts = ~%.0f cm)", n_front_sts, front_width_cm),
+    y        = "Vertical Row Equivalent (Bottom to Top)"
+  ) +
+  theme(
+    panel.grid      = element_blank(),
+    legend.position = "bottom",
+    legend.title    = element_blank(),
+    plot.title      = element_text(face = "bold")
+  )
+```
+
+### Unwrapped Row-by-Stitch Counting Grid (`Rows 0–`r pat$n_hdc_rows + 1L``)
+
+Because chevron rows run along a `45°` diagonal, this companion unwrapped `geom_tile` matrix flattens each pattern row horizontally so **1 tile = 1 exact crochet stitch worked in that row** (with special stitch actions highlighted along the outer edges and center spine).
+
+```{r}
+#| label: unwrapped-row-grid
+#| fig-width: 10.0
+#| fig-height: 5.2
+#| fig-cap: "Unwrapped Row-by-Stitch Matrix (Rows 0 to Trim): every horizontal row shows the exact stitch count on the Left Wing, Center Spine/Collar Gap, and Right Wing."
+
+# Build exact stitch-by-stitch tile rows from pat$rows_df
+unwrapped_tiles <- lapply(seq_len(nrow(pat$rows_df)), function(i) {
+  rw    <- pat$rows_df[i, ]
+  r_num <- rw$row_num
+  w_sts <- rw$Wing_Sts
+
+  if (rw$Phase == "Phase 4: Neck Short Rows") {
+    # Leave visual gap in the center proportional to unworked collar stitches
+    sr_step <- r_num - pat$n_peak_rows
+    gap_half <- 1L + 2L * sr_step
+    left_x   <- seq(-gap_half - w_sts + 1L, -gap_half)
+    right_x  <- seq(gap_half, gap_half + w_sts - 1L)
+    tibble::tibble(
+      Row_Num    = r_num,
+      Stitch_Pos = c(left_x, right_x),
+      Color_Code = rw$color_code,
+      Action     = case_when(
+        Stitch_Pos %in% c(min(left_x), min(left_x) + 1L, max(right_x) - 1L, max(right_x)) ~ "Decrease (hdc2tog)",
+        TRUE ~ "Standard Stitch"
+      )
+    )
+  } else if (r_num == pat$n_hdc_rows + 1L) {
+    # Continuous sc collar & armhole framing row
+    half_tot <- rw$Total_Sts %/% 2L
+    xs       <- seq(-half_tot, half_tot)
+    tibble::tibble(
+      Row_Num    = r_num,
+      Stitch_Pos = xs,
+      Color_Code = rw$color_code,
+      Action     = "Standard Stitch"
+    )
+  } else {
+    # Full mitered chevron rows (Phase 1, 2, 3): Left Wing + Center Spine (0) + Right Wing
+    left_x  <- seq(-w_sts, -1L)
+    right_x <- seq(1L, w_sts)
+    xs      <- c(left_x, 0L, right_x)
+    tibble::tibble(
+      Row_Num    = r_num,
+      Stitch_Pos = xs,
+      Color_Code = rw$color_code,
+      Action     = case_when(
+        Stitch_Pos == 0L ~ "Center Spine (ch-1 / fsc)",
+        rw$Phase == "Phase 3: Armhole Taper" &
+          Stitch_Pos %in% c(min(left_x), min(left_x) + 1L, max(right_x) - 1L, max(right_x)) ~ "Decrease (hdc2tog)",
+        rw$Phase == "Phase 2: Rib Baseline" &
+          Stitch_Pos %in% c(min(left_x), max(right_x)) ~ "Increase (+1/+2)",
+        TRUE ~ "Standard Stitch"
+      )
+    )
+  }
+}) %>% bind_rows()
+
+unwrapped_markers <- unwrapped_tiles %>%
+  filter(Action != "Standard Stitch")
+
+ggplot(unwrapped_tiles, aes(x = Stitch_Pos, y = Row_Num, fill = Color_Code)) +
+  geom_tile(color = "white", linewidth = 0.2, width = 1, height = 1) +
+  geom_point(
+    data = unwrapped_markers,
+    aes(x = Stitch_Pos, y = Row_Num, shape = Action),
+    size = 1.6, color = "#1A1A1A", stroke = 0.6
+  ) +
+  geom_hline(yintercept = pat$n_rib_rows + 0.5, color = "grey35", linetype = "dashed", linewidth = 0.5) +
+  geom_hline(yintercept = pat$n_peak_rows + 0.5, color = "grey35", linetype = "dashed", linewidth = 0.5) +
+  scale_fill_manual(
+    values = setNames(palette_df$hex, palette_df$code),
+    guide  = "none"
+  ) +
+  scale_shape_manual(values = c(
+    "Center Spine (ch-1 / fsc)" = 18,
+    "Increase (+1/+2)"          = 3,
+    "Decrease (hdc2tog)"        = 4
+  )) +
+  scale_y_continuous(breaks = seq(0, pat$n_hdc_rows + 1L, by = 2)) +
+  coord_fixed(ratio = 2.2) +
+  theme_minimal(base_size = 10.5) +
+  labs(
+    title    = "Unwrapped Row-by-Stitch Matrix (Exact Stitch Counts per Row)",
+    subtitle = "Each row flattened horizontally around Center Spine (0); center gap on Rows 12–16 shows unworked flat collar",
+    x        = "Centered Stitch Index (Left Wing  <--  0  -->  Right Wing)",
+    y        = "Pattern Row Number (0 = fsc, Top = Ochre Trim)"
+  ) +
+  theme(
+    panel.grid      = element_blank(),
+    legend.position = "bottom",
+    legend.title    = element_blank(),
+    plot.title      = element_text(face = "bold")
+  )
+```
+
+---
+
+## 3. Euclidean Blueprint & Construction Schematics
+
+### Figure 1: True-to-Scale Garment Blueprint & 2-Row Stripe Map
+
+```{r}
+#| label: fig-garment-blueprint
+#| fig-width: 10.5
+#| fig-height: 6.4
+#| fig-cap: "True-to-scale 2D Euclidean schematic (cm) showing every 2-row color stripe, the dramatic 90-degree almost-underboob inverted-V cutout with anatomical bust-contour reference arcs, the short-row blunted collar framed in Ochre (C2), and the 66.0 cm Forest Green (C1) ribbed underbust band."
+
+half_band   <- band_total_length_cm / 2
+half_front  <- pat$front_actual_cm / 2
+half_collar <- pat$collar_actual_cm / 2
+y_col       <- pat$y_collar_actual
+
+# Anatomical S/M bust contour & apex reference (~88 cm bust: r = 7.5 cm mounds resting on y = 0 at x = +-10 cm)
+theta_seq <- seq(0, 2 * pi, length.out = 180)
+bust_contours <- bind_rows(
+  tibble::tibble(side = "L", x = -10.0 + 7.5 * cos(theta_seq), y = 7.5 + 7.5 * sin(theta_seq)),
+  tibble::tibble(side = "R", x =  10.0 + 7.5 * cos(theta_seq), y = 7.5 + 7.5 * sin(theta_seq))
+)
+bust_apex_pts <- tibble::tibble(x = c(-10.2, 10.2), y = c(8.2, 8.2))
+
+# Ribbed band polygon & vertical rib texture lines
+band_rect <- tibble::tibble(
+  xmin = -half_band, xmax = half_band,
+  ymin = -band_height_cm, ymax = 0
+)
+rib_lines <- tibble::tibble(
+  x = seq(-half_band + 0.75, half_band - 0.75, by = 0.75)
+)
+
+# Buttonhole eyelets at both back ends (3 eyelets per side)
+eyelet_y <- seq(-band_height_cm * 0.78, -band_height_cm * 0.22, length.out = 3)
+eyelets_df <- bind_rows(
+  tibble::tibble(x = -half_band + 1.1, y = eyelet_y),
+  tibble::tibble(x =  half_band - 1.1, y = eyelet_y)
+)
+
+# Ochre (C2) continuous sc trim path along armholes + flat collar
+ochre_trim_path <- tibble::tibble(
+  x = c(half_front, pat$x_underarm_top, half_collar, -half_collar, -pat$x_underarm_top, -half_front),
+  y = c(0, pat$y_underarm_top, y_col, y_col, pat$y_underarm_top, 0)
+)
+
+# Inner cutout C1 sc stabilization border triangle
+cutout_border_path <- tibble::tibble(
+  x = c(-cutout_height_cm, 0, cutout_height_cm, -cutout_height_cm),
+  y = c(0, cutout_height_cm, 0, 0)
+)
+
+# Short I-cord strap stubs indicating strap emergence at collar corners
+strap_stubs <- bind_rows(
+  tibble::tibble(side = "L", x = c(-half_collar, -half_collar - 1.8), y = c(y_col, y_col + 3.4)),
+  tibble::tibble(side = "R", x = c( half_collar,  half_collar + 1.8), y = c(y_col, y_col + 3.4))
+)
+
+ggplot() +
+  # 1. Forest Green perpendicular sc BLO ribbed band
+  geom_rect(
+    data = band_rect,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+    fill = "#2E5A36", color = "#1B3821", linewidth = 0.6
+  ) +
+  geom_segment(
+    data = rib_lines,
+    aes(x = x, xend = x, y = -band_height_cm, yend = 0),
+    color = "#3E7448", linewidth = 0.25, alpha = 0.7
+  ) +
+  geom_point(
+    data = eyelets_df, aes(x = x, y = y),
+    shape = 21, size = 2.4, fill = "#FAF8F2", color = "#1B3821", stroke = 0.7
+  ) +
+
+  # 2. Mitered chevron & short-row polygons (true 2-row stripe colors)
+  geom_polygon(
+    data = pat$polys_df,
+    aes(x = x, y = y, group = poly_id, fill = color_code),
+    color = "#2B2B2B33", linewidth = 0.2
+  ) +
+  # Subtle anatomical S/M bust mound & apex reference showing almost-underboob reveal vs safe apex coverage
+  geom_path(
+    data = bust_contours, aes(x = x, y = y, group = side),
+    color = "#5C3A3866", linetype = "dashed", linewidth = 0.45
+  ) +
+  geom_point(
+    data = bust_apex_pts, aes(x = x, y = y),
+    shape = 4, size = 2.0, stroke = 0.7, color = "#5C3A3888"
+  ) +
+  # Highlight center mitered spine (Rows 1..n_peak_rows)
+  annotate(
+    "segment", x = 0, xend = 0, y = cutout_height_cm, yend = y_col,
+    color = "#2B2B2B88", linetype = "dotted", linewidth = 0.5
+  ) +
+
+  # 3. Inner cutout C1 sc + surface sl st stabilization trim
+  geom_path(
+    data = cutout_border_path, aes(x = x, y = y),
+    color = "#2E5A36", linewidth = 1.5, lineend = "round", linejoin = "mitre"
+  ) +
+
+  # 4. Ochre (C2) continuous sc edging framing both armholes & flat neckline
+  geom_path(
+    data = ochre_trim_path, aes(x = x, y = y),
+    color = "#B87B28", linewidth = 1.8, lineend = "round", linejoin = "round"
+  ) +
+
+  # 5. I-cord strap stubs at collarbone corners
+  geom_path(
+    data = strap_stubs, aes(x = x, y = y, group = side),
+    color = "#2E5A36", linewidth = 2.3, lineend = "round"
+  ) +
+  annotate(
+    "text", x = half_collar + 3.8, y = y_col + 1.0,
+    label = paste0("3-st I-cord straps\n(2 x ", icord_length_cm, " cm)"),
+    hjust = 0, vjust = 0.5, size = 2.8, fontface = "italic", color = "#2E5A36"
+  ) +
+
+  # 6. Dimension callout arrows (in cm)
+  # Total ribbed band length (66.0 cm)
+  annotate(
+    "segment", x = -half_band, xend = half_band, y = -band_height_cm - 2.3, yend = -band_height_cm - 2.3,
+    arrow = arrow(ends = "both", length = unit(0.18, "cm")), color = "grey25", linewidth = 0.5
+  ) +
+  annotate(
+    "label", x = 0, y = -band_height_cm - 2.3,
+    label = sprintf("Total Ribbed Band = %.1f cm (%.0f cm L back + %.0f cm front + %.0f cm R back; %.0f cm lace gap)",
+                    band_total_length_cm, pat$back_ext_cm, front_width_cm, pat$back_ext_cm, back_gap_cm),
+    size = 2.9, fill = "white", label.size = 0.2, color = "grey15"
+  ) +
+  # Front rib baseline width (38.0 cm)
+  annotate(
+    "segment", x = -half_front, xend = half_front, y = -band_height_cm + 0.85, yend = -band_height_cm + 0.85,
+    arrow = arrow(ends = "both", length = unit(0.15, "cm")), color = "#F3EAD6", linewidth = 0.5
+  ) +
+  annotate(
+    "label", x = 0, y = -band_height_cm / 2 + 0.35,
+    label = sprintf("Front Rib Baseline = %.1f cm (incl. %.1f cm bridged cutout)", front_width_cm, 2 * cutout_height_cm),
+    size = 2.7, fill = "#2E5A36", color = "#F3EAD6", fontface = "bold", label.size = NA
+  ) +
+  # Band height (4.5 cm)
+  annotate(
+    "segment", x = -half_band - 1.5, xend = -half_band - 1.5, y = -band_height_cm, yend = 0,
+    arrow = arrow(ends = "both", length = unit(0.14, "cm")), color = "grey25", linewidth = 0.45
+  ) +
+  annotate(
+    "text", x = -half_band - 2.1, y = -band_height_cm / 2,
+    label = sprintf("%.1f cm\nband", band_height_cm),
+    hjust = 1, size = 2.8, color = "grey20"
+  ) +
+  # Inverted-V almost-underboob cutout callout
+  annotate(
+    "segment", x = -cutout_height_cm + 0.45, xend = cutout_height_cm - 0.45, y = 0.65, yend = 0.65,
+    arrow = arrow(ends = "both", length = unit(0.14, "cm")), color = "#2E5A36", linewidth = 0.5
+  ) +
+  annotate(
+    "label", x = 0, y = min(3.2, cutout_height_cm * 0.36),
+    label = sprintf("90° Almost-Underboob Cutout\n%.1f cm base x %.1f cm height", 2 * cutout_height_cm, cutout_height_cm),
+    size = 2.55, fontface = "bold", fill = "#FFFFFFD9", color = "#1B3821", label.size = 0.15, lineheight = 0.95
+  ) +
+  # Body height (21.0 cm)
+  annotate(
+    "segment", x = half_front + 3.2, xend = half_front + 3.2, y = 0, yend = y_col,
+    arrow = arrow(ends = "both", length = unit(0.16, "cm")), color = "grey25", linewidth = 0.5
+  ) +
+  annotate(
+    "label", x = half_front + 3.2, y = y_col / 2,
+    label = sprintf("Body Height\n%.1f cm", body_height_cm),
+    size = 2.8, fill = "white", label.size = 0.2, color = "grey15"
+  ) +
+  # Blunted flat collar width (9.0 cm)
+  annotate(
+    "segment", x = -half_collar, xend = half_collar, y = y_col + 1.3, yend = y_col + 1.3,
+    arrow = arrow(ends = "both", length = unit(0.15, "cm")), color = "#B87B28", linewidth = 0.5
+  ) +
+  annotate(
+    "label", x = 0, y = y_col + 2.8,
+    label = sprintf("Flat Short-Rowed Collar = %.1f cm", neck_flat_width_cm),
+    size = 2.85, fontface = "bold", fill = "#FFFDF9", color = "#8C5811", label.size = 0.2
+  ) +
+
+  scale_fill_manual(
+    name   = "2-Row Stripe Sequence:",
+    values = setNames(palette_df$hex, palette_df$code),
+    breaks = stripe_cycle_codes,
+    labels = paste0(
+      stripe_cycle_codes, ": ",
+      palette_df$name[match(stripe_cycle_codes, palette_df$code)]
+    )
+  ) +
+  coord_fixed(ratio = 1, xlim = c(-39, 36), ylim = c(-8.0, y_col + 5.0), clip = "off") +
+  theme_minimal(base_size = 11) +
+  labs(
+    title    = "Garment Blueprint & True-Scale Stripe Map (Size S/M)",
+    subtitle = sprintf(
+      "Gauge: %.1f sts x %.1f rows/cm (3.0 mm hdc) | %.1f sts x %.1f rows/cm (2.5 mm sc BLO) | %d Chevron/Short Rows + Trim",
+      sts_per_cm, rows_per_cm, band_sts_per_cm, band_rows_per_cm, pat$n_hdc_rows
+    ),
+    x = "Horizontal Width from Center Spine (cm)",
+    y = "Height from Top of Ribbed Band (cm)"
+  ) +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    legend.position  = "bottom",
+    plot.title       = element_text(face = "bold")
+  )
+```
+
+### Figure 2: 4-Stage Construction Phase Diagram
+
+```{r}
+#| label: fig-construction-phases
+#| fig-width: 10.5
+#| fig-height: 7.4
+#| fig-cap: "Step-by-step construction mechanics across all four phases: (1) odd-count fsc V-arch framing the 90-degree cutout, (2) 180-degree horizontal rib expansion, (3) armhole decreases & symmetrical neck short rows, and (4) perpendicular join-as-you-go ribbed band, inner cutout stabilization, and criss-cross corset lacing."
+
+phase_levels <- c(
+  "1. Phase 1: Foundation fsc V-Arch",
+  "2. Phase 2: 180° Rib Baseline Expansion",
+  "3. Phase 3 & 4: Armhole Taper & Neck Short Rows",
+  "4. Ribbed Band, Cutout Border & Corset Lacing"
+)
+
+# Assemble cumulative polygon states across the 4 panels
+p2_polys <- pat$polys_df %>%
+  filter(row_num <= pat$n_rib_rows) %>%
+  mutate(panel = factor(phase_levels[2], levels = phase_levels), state = "Active")
+
+p3_polys <- bind_rows(
+  pat$polys_df %>%
+    filter(row_num <= pat$n_rib_rows) %>%
+    mutate(panel = factor(phase_levels[3], levels = phase_levels), state = "Previous"),
+  pat$polys_df %>%
+    filter(row_num > pat$n_rib_rows) %>%
+    mutate(panel = factor(phase_levels[3], levels = phase_levels), state = "Active")
+)
+
+p4_polys <- pat$polys_df %>%
+  mutate(panel = factor(phase_levels[4], levels = phase_levels), state = "Previous")
+
+facet_polys <- bind_rows(p2_polys, p3_polys, p4_polys)
+
+# Panel 1: fsc arch path
+p1_arch <- tibble::tibble(
+  panel = factor(phase_levels[1], levels = phase_levels),
+  x     = c(-cutout_height_cm, 0, cutout_height_cm),
+  y     = c(0, cutout_height_cm, 0)
+)
+p1_pts <- tibble::tibble(
+  panel = factor(phase_levels[1], levels = phase_levels),
+  x     = c(-cutout_height_cm, 0, cutout_height_cm),
+  y     = c(0, cutout_height_cm, 0),
+  lbl   = c(
+    paste0(" st 1\n (-", cutout_height_cm, ", 0)"),
+    paste0("Marked Center fsc\n(st ", pat$leg0_sts + 1L, " of ", pat$fsc_total_sts, ")"),
+    paste0("st ", pat$fsc_total_sts, " \n(+", cutout_height_cm, ", 0) ")
+  ),
+  vj = c(1.3, -0.5, 1.3)
+)
+
+# Panel 2: horizontal expansion vectors
+p2_arrows <- tibble::tibble(
+  panel = factor(phase_levels[2], levels = phase_levels),
+  x     = c(-cutout_height_cm - 1, cutout_height_cm + 1, 0),
+  xend  = c(-half_front, half_front, 0),
+  y     = c(-1.6, -1.6, cutout_height_cm + 1),
+  yend  = c(-1.6, -1.6, cutout_height_cm + pat$n_rib_rows * pat$step_c)
+)
+
+# Panel 3: armhole inward taper & flat short-row collar vectors
+p3_trim <- ochre_trim_path %>%
+  mutate(panel = factor(phase_levels[3], levels = phase_levels))
+
+p3_arrows <- tibble::tibble(
+  panel = factor(phase_levels[3], levels = phase_levels),
+  x     = c(-half_front - 1.2, half_front + 1.2),
+  xend  = c(-pat$x_underarm_top - 1.2, pat$x_underarm_top + 1.2),
+  y     = c(0.5, 0.5),
+  yend  = c(pat$y_underarm_top, pat$y_underarm_top)
+)
+
+# Panel 4: band, inner stabilization round & schematic corset criss-cross lacing
+p4_band <- band_rect %>%
+  mutate(panel = factor(phase_levels[4], levels = phase_levels))
+p4_cutout_ring <- cutout_border_path %>%
+  mutate(panel = factor(phase_levels[4], levels = phase_levels))
+p4_trim <- ochre_trim_path %>%
+  mutate(panel = factor(phase_levels[4], levels = phase_levels))
+
+# Illustrative lacing cords curving from collar corners toward back band eyelets
+p4_cords <- bind_rows(
+  tibble::tibble(
+    panel = factor(phase_levels[4], levels = phase_levels), cord = "L_to_R",
+    x = c(-half_collar, 0, half_band - 1.1, -half_band + 1.1, half_band - 1.1),
+    y = c(y_col, y_col + 3.2, eyelet_y[3], eyelet_y[2], eyelet_y[1])
+  ),
+  tibble::tibble(
+    panel = factor(phase_levels[4], levels = phase_levels), cord = "R_to_L",
+    x = c(half_collar, 0, -half_band + 1.1, half_band - 1.1, -half_band + 1.1),
+    y = c(y_col, y_col + 3.2, eyelet_y[3], eyelet_y[2], eyelet_y[1])
+  )
+)
+
+# Phase callout annotations
+panel_notes <- tibble::tibble(
+  panel = factor(phase_levels, levels = phase_levels),
+  x     = c(0, 0, 0, 0),
+  y     = c(max(19.5, cutout_height_cm + 7.5), 23.0, 24.3, -6.7),
+  label = c(
+    sprintf("%d fsc (%d/leg + 1 center st)\n%.2f cm legs @ 90° apex",
+            pat$fsc_total_sts, pat$leg0_sts, cutout_height_cm * sqrt(2)),
+    sprintf("Rows 1–%d: +1/+2 sts @ ends & peak\n180° flat base grows to %.1f cm", pat$n_rib_rows, front_width_cm),
+    sprintf("Rows %d–%d: [hdc2tog] x2 outer taper\nRows %d–%d: short rows + C2 sc trim",
+            pat$n_rib_rows + 1L, pat$n_peak_rows, pat$n_peak_rows + 1L, pat$n_hdc_rows),
+    sprintf("JAYG %d-row sc BLO band bridges %.0f cm cutout\n+ 2.5 mm sc/sl st cutout lock + I-cord lacing",
+            pat$band_total_rows, 2 * cutout_height_cm)
+  )
+)
+
+ggplot() +
+  # Ghost garment outline for spatial reference in Panel 1
+  geom_polygon(
+    data = pat$polys_df %>% mutate(panel = factor(phase_levels[1], levels = phase_levels)),
+    aes(x = x, y = y, group = poly_id),
+    fill = "grey95", color = NA
+  ) +
+  # Chevron polygons across Panels 2, 3, 4
+  geom_polygon(
+    data = facet_polys,
+    aes(x = x, y = y, group = poly_id, fill = color_code, alpha = state),
+    color = "#2B2B2B28", linewidth = 0.15
+  ) +
+  # Panel 1 foundation fsc arch
+  geom_path(
+    data = p1_arch, aes(x = x, y = y),
+    color = "#B87B28", linewidth = 2.0, lineend = "round"
+  ) +
+  geom_point(
+    data = p1_pts, aes(x = x, y = y),
+    size = 2.8, color = "#2E5A36"
+  ) +
+  geom_text(
+    data = p1_pts, aes(x = x, y = y, label = lbl, vjust = vj),
+    size = 2.6, fontface = "bold", color = "grey20"
+  ) +
+  # Panel 2 expansion arrows
+  geom_segment(
+    data = p2_arrows,
+    aes(x = x, xend = xend, y = y, yend = yend),
+    arrow = arrow(length = unit(0.16, "cm")), color = "#2E5A36", linewidth = 0.7
+  ) +
+  # Panel 3 trim & armhole taper arrows
+  geom_path(
+    data = p3_trim, aes(x = x, y = y),
+    color = "#B87B28", linewidth = 1.4
+  ) +
+  geom_segment(
+    data = p3_arrows,
+    aes(x = x, xend = xend, y = y, yend = yend),
+    arrow = arrow(length = unit(0.16, "cm")), color = "#B87B28", linewidth = 0.7
+  ) +
+  # Panel 4 perpendicular band, cutout border & criss-cross lacing cords
+  geom_rect(
+    data = p4_band,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+    fill = "#2E5A36", color = "#1B3821", linewidth = 0.45
+  ) +
+  geom_path(
+    data = p4_cutout_ring, aes(x = x, y = y),
+    color = "#1B3821", linewidth = 1.3
+  ) +
+  geom_path(
+    data = p4_trim, aes(x = x, y = y),
+    color = "#B87B28", linewidth = 1.2
+  ) +
+  geom_path(
+    data = p4_cords, aes(x = x, y = y, group = cord),
+    color = "#2E5A36", linetype = "dashed", linewidth = 0.65, alpha = 0.85
+  ) +
+  geom_label(
+    data = panel_notes, aes(x = x, y = y, label = label),
+    size = 2.65, fill = "#FFFFFFE6", label.size = 0.2, fontface = "bold", color = "grey15"
+  ) +
+  facet_wrap(~panel, ncol = 2) +
+  scale_fill_manual(values = setNames(palette_df$hex, palette_df$code), guide = "none") +
+  scale_alpha_manual(values = c("Active" = 1.0, "Previous" = 0.38), guide = "none") +
+  coord_fixed(ratio = 1, xlim = c(-35, 35), ylim = c(-8.5, 26.5)) +
+  theme_minimal(base_size = 10.5) +
+  labs(
+    title    = "4-Stage Modular Construction Diagram",
+    subtitle = "Active stitches highlighted at full opacity; dashed lines in Panel 4 show criss-cross back lacing trajectory",
+    x = "Width (cm)",
+    y = "Height (cm)"
+  ) +
+  theme(
+    strip.text       = element_text(face = "bold", size = 10),
+    strip.background = element_rect(fill = "#F5F3EE", color = "grey80"),
+    panel.border     = element_rect(color = "grey85", fill = NA, linewidth = 0.4),
+    panel.grid.minor = element_blank()
+  )
+```
+
+---
+
+## 4. Materials, Hooks & Dynamic Yardage Table
+
+Yarn consumption is derived directly from stitch geometry: each `3.0 mm` `hdc` consumes yarn proportional to its stitch footprint $(1/\text{sts\_per\_cm} + 1/\text{rows\_per\_cm})$, while `2.5 mm` `sc BLO` ribbing, the inner cutout stabilization border, and both `160 cm` 3-stitch I-cord straps are summed and multiplied by the **+15% buffer**.
+
+```{r}
+#| label: yardage-table
+# Physics-based yarn length per stitch calibrated to #2 Sport cotton
+m_per_hdc   <- 0.0225 * ((1 / sts_per_cm + 1 / rows_per_cm) / (1 / 2.2 + 1 / 1.6))
+m_per_fsc   <- 0.88 * m_per_hdc
+m_per_sc30  <- 0.72 * m_per_hdc
+m_per_sc25  <- 0.0175 * ((1 / band_sts_per_cm + 1 / band_rows_per_cm) / (1 / 2.4 + 1 / 2.6))
+m_per_sl25  <- 0.62 * m_per_sc25
+
+# Body yarn by color code
+body_yarn <- pat$rows_df %>%
+  mutate(
+    raw_meters = case_when(
+      row_num == 0L ~ Total_Sts * m_per_fsc,
+      row_num == pat$n_hdc_rows + 1L ~ Total_Sts * m_per_sc30,
+      TRUE ~ Total_Sts * m_per_hdc
+    )
+  ) %>%
+  group_by(color_code) %>%
+  summarise(
+    Body_Stitches = sum(Total_Sts),
+    Body_Meters   = sum(raw_meters),
+    .groups       = "drop"
+  )
+
+# C1 structural components (band + inner cutout border + 2 x 160 cm 3-st I-cords)
+band_meters   <- (pat$band_total_rows * pat$band_width_sts) * m_per_sc25
+cutout_meters <- pat$cutout_round_sts * (m_per_sc25 + m_per_sl25)
+icord_meters  <- 2 * pat$icord_rows_each * icord_stitches * (1.06 * m_per_sc25)
+
+yardage_summary <- palette_df %>%
+  left_join(body_yarn, by = c("code" = "color_code")) %>%
+  mutate(
+    Trim_Band_Strap_Meters = if_else(code == "C1", band_meters + cutout_meters + icord_meters, 0.0),
+    Net_Meters             = Body_Meters + Trim_Band_Strap_Meters,
+    Buffered_Meters        = ceiling(Net_Meters * yardage_buffer),
+    Estimated_Grams        = ceiling(Buffered_Meters / meters_per_gram),
+    Skeins_50g             = ceiling(Buffered_Meters / skein_meters)
+  ) %>%
+  select(
+    Color_Code       = code,
+    Shade            = name,
+    Hex              = hex,
+    Pattern_Role     = role,
+    `Meters (+15%)`  = Buffered_Meters,
+    `Grams (+15%)`   = Estimated_Grams,
+    `50g Balls`      = Skeins_50g
+  )
+
+kable(
+  yardage_summary,
+  align   = c("l", "l", "l", "l", "r", "r", "r"),
+  caption = sprintf(
+    "Dynamic Yarn Requirements — %s (%.0f m / %.0f g skein; includes +%.0f%% buffer)",
+    yarn_weight_class, skein_meters, skein_grams, (yardage_buffer - 1) * 100
+  )
+)
+```
+
+- **Main Body Hook:** `r sprintf("%.1f mm", hook_body_mm)` — Gauge: `r sprintf("%.0f sts x %.0f rows = 10 x 10 cm", sts_per_cm * 10, rows_per_cm * 10)` in blocked `hdc`.
+- **Band, Cutout & Strap Hook:** `r sprintf("%.1f mm", hook_trim_mm)` — Gauge: `r sprintf("%.0f sts x %.0f rows = 10 x 10 cm", band_sts_per_cm * 10, band_rows_per_cm * 10)` in `sc BLO` ribbing.
+- **Notions:** Locking stitch markers (at least 3: center spine peak + left/right underarm corners), tapestry needle, rust-proof blocking pins.
+
+---
+
+## 5. Abbreviations & Cotton Structural Notes (US Crochet Terms)
+
+- **[Ch](/vocabulary.qmd#ch)** — Chain
+- **[Sl St](/vocabulary.qmd#sl-st)** — Slip stitch
+- **[SC](/vocabulary.qmd#sc)** — Single crochet
+- **SC BLO** — Single crochet worked in the **back loop only** (creates elastic vertical knit-look ribbing when turned perpendicular)
+- **FSC** — Foundation single crochet (creates chain + first `sc` row simultaneously with matching stretch)
+- **[HDC](/vocabulary.qmd#hdc)** — Half double crochet
+- **HDC2Tog** — Half double crochet 2 stitches together (`[hdc2tog] x2` works two consecutive decreases over 4 stitches, decreasing by 2 stitches)
+- **SC3Tog** — Single crochet 3 stitches together (mitered inner-corner decrease at cutout apex)
+- **JAYG** — Join-as-you-go slip-stitch attachment
+
+### Structural Anti-Sag Engineering for 100% Cotton
+
+1. **Zero-Bulk Stripe Transitions (Crocheting Over Tails):** Because every stripe is exactly **2 rows** (`C2 -> C3 -> C4 -> C1`), all color joins up to Row `r pat$n_peak_rows` land at the **same right-hand edge**. Change colors on the final yarn-over pull-through of the second row in each stripe, leave a `10 cm` tail, and **crochet directly over both the old and new yarn tails** for the first `6–8 sts` of the next row. In inelastic 100% cotton, locking tails inside the outer edge reinforces the rib baseline and armhole selvedges while eliminating weaving-in bulk.
+2. **Preventing Sternum Cutout Bridge Dip:** Across the `r sprintf("%.1f cm", 2 * cutout_height_cm)` empty sternum cutout, the Forest Green (`C1`) ribbed band bridges open air without upper fabric pulling it upward. Switching down to the **`r sprintf("%.1f mm", hook_trim_mm)` hook** and working **1 snug round of `sc` (`sc3tog` at the apex) + 1 round of surface `sl st`** around the interior perimeter of the cutout triangle locks the `45°` bias edges and anchors the bridged band horizontally so it never sags or gapes on the body.
+3. **Why Outer Armholes Use `[hdc2tog] x2`:** At `r sts_per_cm` sts/cm and `r rows_per_cm` rows/cm, one `hdc` row is `r sprintf("%.3f cm", pat$dT)` thick whereas one `hdc` stitch is only `r sprintf("%.3f cm", 1 / sts_per_cm)` wide. A single `hdc2tog` (`-1` st) fails to overcome the outward $45^\circ$ row projection. Working `[hdc2tog] x2` (`-2` sts at each outer edge) cleanly pivots the side-bust inward toward the collarbone.
+
+---
+
+## 6. Complete Row-by-Row Stitch Table
+
+```{r}
+#| label: row-by-row-table
+display_table <- pat$rows_df %>%
+  select(
+    Row,
+    Phase,
+    Color,
+    `Row Start Action`    = Row_Start_Action,
+    `Center Peak Action`  = Center_Action,
+    `Row End Action`      = Row_End_Action,
+    `Stitches / Wing`     = Wing_Sts,
+    `Total Stitches`      = Total_Sts
+  )
+
+kable(
+  display_table,
+  align   = c("l", "l", "l", "l", "l", "l", "r", "r"),
+  caption = sprintf(
+    "Complete Gauge-Parameterized Row-by-Row Schedule (Rows 0–%d + Ochre Collar/Armhole Trim)",
+    pat$n_hdc_rows
+  )
+)
+```
+
+---
+
+## 7. Step-by-Step Written Instructions
+
+### Phase 1 — Foundation Arch (`Row 0`, `3.0 mm` hook)
+
+1. With **`C2` (Ochre)** and the **`r sprintf("%.1f mm", hook_body_mm)` hook**, work **`r pat$fsc_total_sts` `fsc`**.
+2. Place a locking stitch marker in the **`r pat$leg0_sts + 1L`th (center) stitch** (`r pat$leg0_sts` sts on Right Wing + `1` center spine st + `r pat$leg0_sts` sts on Left Wing). Turn. *(Note: `Row 0` establishes the flexible `r sprintf("%.2f cm", cutout_height_cm * sqrt(2))`-per-leg cutout foundation rim; `Rows 1–2` begin the 2-row stripe count in `C2`.)*
+
+### Phase 2 — Flat Rib Baseline Expansion (`Rows 1–`r pat$n_rib_rows``, `3.0 mm` hook)
+
+Work back and forth in **2-row stripes** following the color rotation **`C2 -> C3 -> C4 -> C1`**, changing colors at the right-hand edge after every even-numbered row and crocheting over yarn tails for `6–8 sts`:
+
+- **Row 1 (RS, `C2`):** `Ch 1` *(does not count as a st throughout)*, follow the **Row Start Action** in the first `fsc` (`2 hdc` for `+1` inc, or `3 hdc` for `+2` inc), `hdc` in each remaining `fsc` up to the marked center stitch, work the **Center Peak Action** — either `(1 hdc, ch 1, 1 hdc)` or `(2 hdc, ch 1, 2 hdc)` as listed in the table — directly into the marked center `fsc` (move marker to the new `ch-1` space), `hdc` down the second wing to the last st, and work the **Row End Action** in the last st. Turn. (`r pat$rows_df$Wing_Sts[2]` sts per wing; `r pat$rows_df$Total_Sts[2]` sts total incl. `ch-1` sp).
+- **Rows 2–`r pat$n_rib_rows`:** `Ch 1`, work the listed **Row Start Action** (`2 hdc` or `3 hdc` in first st), `hdc` in each st to the center `ch-1` space, work the listed **Center Peak Action** into the `ch-1` space, `hdc` in each st to the last st, and work the listed **Row End Action** in the final st. Turn.
+- After **Row `r pat$n_rib_rows`** (`r pat$rows_df$Color[pat$n_rib_rows + 1L]`), your flat `180°` bottom rib edge measures **`r sprintf("%.1f cm", pat$front_actual_cm)`** (`r sprintf("%.1f cm", (pat$front_actual_cm - 2 * cutout_height_cm) / 2)` left wing + `r sprintf("%.1f cm", 2 * cutout_height_cm)` almost-underboob center cutout + `r sprintf("%.1f cm", (pat$front_actual_cm - 2 * cutout_height_cm) / 2)` right wing) with **`r pat$rows_df$Wing_Sts[pat$n_rib_rows + 1L]` sts per wing**. Place markers at both outer bottom underarm/rib corners.
+
+### Phase 3 — Armhole Side-Bust Taper (`Rows `r pat$n_rib_rows + 1L`–`r pat$n_peak_rows``, `3.0 mm` hook)
+
+Continue the 2-row stripe sequence, maintaining the center `ch-1` spine increases while switching outer row ends to double decreases so the sides pivot upward and inward along the side-bust:
+
+- **Rows `r pat$n_rib_rows + 1L`–`r pat$n_peak_rows`:** `Ch 1`, **`[hdc2tog] x2`** over the first 4 sts (`-2` sts), `hdc` in each st to the center `ch-1` space, work the listed **Center Peak Action** in the `ch-1` space, `hdc` in each st until 4 sts remain, **`[hdc2tog] x2`** over the last 4 sts (`-2` sts). Turn.
+- At the end of **Row `r pat$n_peak_rows`** (`r pat$rows_df$Color[pat$n_peak_rows + 1L]`), the center spine peak reaches **`r sprintf("%.1f cm", pat$y_collar_actual)`** (`~`r sprintf("%.1f cm", body_height_cm)` target, `r pat$rows_df$Wing_Sts[pat$n_peak_rows + 1L]` sts per wing). Position yarn at the outer armhole edge for the first shoulder's short rows.
+
+### Phase 4 — Short-Row Blunted Neckline & Ochre Framing Row (`Rows `r pat$n_peak_rows + 1L`–`r pat$n_hdc_rows` + Trim`)
+
+Work each shoulder separately across **`r pat$n_neck_rows` short rows** to level off a crisp **`r sprintf("%.1f cm", neck_flat_width_cm)`** horizontal collarbone edge:
+
+1. **First Shoulder (`Rows `r pat$n_peak_rows + 1L`–`r pat$n_hdc_rows``):**
+   - **Odd Short Rows (`Rows `r paste(seq(pat$n_peak_rows + 1L, pat$n_hdc_rows, by = 2L), collapse = ", ")`` — worked Outer Armhole $\to$ Neck):** `Ch 1`, `[hdc2tog] x2` over first 4 sts, `hdc` up the wing stopping **`1` or `2` sts short** of the previous row's neck end as specified in the table. Leave remaining neck st(s) unworked. Turn.
+   - **Even Short Rows (`Rows `r paste(seq(pat$n_peak_rows + 2L, pat$n_hdc_rows, by = 2L), collapse = ", ")`` — worked Neck $\to$ Outer Armhole):** Do **not** `ch 1`; `sl st` loosely across the first `1` or `2` neck sts as listed in the table, `ch 1`, `hdc` in next st and down the wing until 4 sts remain, `[hdc2tog] x2` over last 4 sts. Change color at the outer armhole edge after every 2-row stripe. Fasten off after **Row `r pat$n_hdc_rows`** (`r pat$rows_df$Color[pat$n_hdc_rows + 1L]`, `r pat$rows_df$Wing_Sts[pat$n_hdc_rows + 1L]` live diagonal armhole sts remaining).
+2. **Second Shoulder (`Rows `r pat$n_peak_rows + 1L`–`r pat$n_hdc_rows``):** Join **`r pat$rows_df$Color[pat$n_peak_rows + 2L]`** at the opposite outer armhole edge and mirror `Rows `r pat$n_peak_rows + 1L`–`r pat$n_hdc_rows`` identically. Fasten off.
+3. **Collar & Armhole Framing Row (`Row `r pat$n_hdc_rows + 1L``, `C2` Ochre, `3.0 mm` hook):** With **RS facing**, join **`C2` (Ochre)** at the right bottom underarm marker. `Ch 1`, work **`r pat$armhole_sc_per_sd` `sc`** evenly up the right side-bust row ends and across the `r pat$rows_df$Wing_Sts[pat$n_hdc_rows + 1L]` live diagonal shoulder stitches to the right collarbone corner (`2 sc` in corner), work **`r pat$collar_sc_sts` `sc`** evenly across the stepped short-row ends + center `ch-1` peak to form a smooth **`r sprintf("%.1f cm", neck_flat_width_cm)`** horizontal collar (`2 sc` in left collarbone corner), and work **`r pat$armhole_sc_per_sd` `sc`** down the left live diagonal shoulder stitches and left side-bust row ends to the left underarm marker. Fasten off `C2`.
+
+### Phase 5 — Join-As-You-Go Perpendicular `sc BLO` Band & Cutout Stabilization (`2.5 mm` hook, `C1`)
+
+```{r}
+#| label: band-eyelet-spacing
+# Compute symmetrical 3-eyelet buttonhole row across band_width_sts
+n_eyelets   <- 3L
+eyelet_ch   <- 1L
+rem_sc      <- pat$band_width_sts - n_eyelets * eyelet_ch
+seg_base    <- rem_sc %/% (n_eyelets + 1L)
+seg_extra   <- rem_sc %%  (n_eyelets + 1L)
+seg_vec     <- rep(seg_base, n_eyelets + 1L)
+if (seg_extra > 0) seg_vec[seq_len(seg_extra)] <- seg_vec[seq_len(seg_extra)] + 1L
+eyelet_instr <- paste0(
+  "sc BLO ", seg_vec[1], ", ",
+  paste(sprintf("[ch %d, sk %d, sc BLO %d]", eyelet_ch, eyelet_ch, seg_vec[-1]), collapse = ", ")
+)
+```
+
+Switch to the **`r sprintf("%.1f mm", hook_trim_mm)` hook** and **`C1` (Forest Green)**. The `r sprintf("%.1f cm", band_height_cm)` band is worked **perpendicular** to the body (`r pat$band_width_sts` sts wide $\times$ `r pat$band_total_rows` rows = `r sprintf("%.1f cm", band_total_length_cm)`):
+
+1. **Left Back Extension (`Band Rows 1–`r pat$rows_back_ext``, `r sprintf("%.1f cm", pat$back_ext_cm)`):**
+   - `Ch `r pat$band_width_sts + 1L``. **Row 1:** `sc` in 2nd `ch` from hook and each `ch` across (`r pat$band_width_sts` sts). `Ch 1`, turn.
+   - **Row 2 (Left Corset Buttonhole Row):** Work 3 evenly spaced lacing eyelets: *`r eyelet_instr`* (`r pat$band_width_sts` sts incl. `ch-1` spaces). `Ch 1`, turn.
+   - **Rows 3–`r pat$rows_back_ext`:** `sc BLO` in each st (and into each `ch-1` eyelet on Row 3) across (`r pat$band_width_sts` sts), `ch 1`, turn at the outer edge. At the top edge of Row `r pat$rows_back_ext`, align with the **left bottom underarm marker** on the RS of the body.
+2. **Left Front Rib Wing — JAYG (`Band Rows `r pat$rows_back_ext + 1L`–`r pat$rows_back_ext + pat$rows_front_wing``, `r sprintf("%.1f cm", (front_width_cm - 2 * cutout_height_cm) / 2)`):**
+   - At the body edge after every odd band row, **`sl st` into the next two `2.4 sts/cm`-spaced edge points** along the horizontal bottom rib baseline of Phase 2 (`sl st 1` to join, `sl st 1` to advance, turn — *do not `ch 1` at the body edge*), then `sc BLO` `r pat$band_width_sts` down to the bottom hem, `ch 1`, turn, and `sc BLO` `r pat$band_width_sts` back up to the body. Stop precisely at the **left base corner of the inverted-V cutout**.
+3. **Sternum Cutout Bridge (`Band Rows `r pat$rows_back_ext + pat$rows_front_wing + 1L`–`r pat$rows_back_ext + pat$rows_front_wing + pat$rows_cutout_brdg``, `r sprintf("%.1f cm", 2 * cutout_height_cm)`):**
+   - Work **`r pat$rows_cutout_brdg` rows** of `sc BLO` (`r pat$band_width_sts` sts, `ch 1`, turn at **both** top and bottom edges) **unattached across open air** to bridge the `r sprintf("%.1f cm", 2 * cutout_height_cm)` base of the sternum cutout. Keep tension firm so the bridge matches `r sprintf("%.1f cm", 2 * cutout_height_cm)` unstretched.
+4. **Right Front Rib Wing — JAYG (`Band Rows `r pat$rows_back_ext + pat$rows_front_wing + pat$rows_cutout_brdg + 1L`–`r pat$rows_back_ext + 2L * pat$rows_front_wing + pat$rows_cutout_brdg``, `r sprintf("%.1f cm", (front_width_cm - 2 * cutout_height_cm) / 2)`):**
+   - Resume `sl st` join-as-you-go attachment starting at the **right base corner of the inverted-V cutout** all the way out to the **right bottom underarm marker**.
+5. **Right Back Extension & Right Eyelets (`Band Rows `r pat$band_total_rows - pat$rows_back_ext + 1L`–`r pat$band_total_rows``, `r sprintf("%.1f cm", pat$back_ext_cm)`):**
+   - Continue `sc BLO` unattached for `r pat$rows_back_ext - 2L` rows.
+   - **Row `r pat$band_total_rows - 1L` (Right Corset Buttonhole Row):** Work *`r eyelet_instr`* to mirror the 3 left eyelets.
+   - **Row `r pat$band_total_rows`:** `sc BLO` in each st/ch across (`r pat$band_width_sts` sts). Fasten off.
+6. **Inner Cutout Anti-Sag Stabilization Round (`2.5 mm` hook, `C1`):**
+   - With **RS facing**, join `C1` at the right bottom corner inside the cutout triangle. Work **`r pat$cutout_leg_sc - 1L` `sc`** evenly up the underside of the right foundation arch leg, work **`sc3tog`** across *(last st before apex, center spine st, first st down left leg)* to lock a crisp `90°` apex, work **`r pat$cutout_leg_sc - 1L` `sc`** down the left leg, and work **`r pat$cutout_base_sc` `sc`** across the top row-ends of the bridged band (`r pat$cutout_round_sts` sts), `sl st` to join.
+   - Work **1 round of firm surface `sl st`** around all `r pat$cutout_round_sts` sts of the cutout triangle. Fasten off and weave in ends securely.
+
+### Phase 6 — 3-Stitch I-Cord Straps & Wet-Blocking (`2.5 mm` hook, `C1`)
+
+1. **Right & Left 3-Stitch I-Cords (`2 x `r sprintf("%.0f cm", icord_length_cm)``):**
+   - With **`C1` (Forest Green)** and the **`r sprintf("%.1f mm", hook_trim_mm)` hook**, insert hook into the **right collarbone corner** of the Ochre collar trim and pull up 3 loops across the 2 corner stitches (`3` loops on hook).
+   - **I-Cord Repeat (`~`r pat$icord_rows_each`` rows):** Drop the 2nd and 3rd loops from the hook (pinch firmly with left thumb and forefinger so they do not unravel), `yo` and pull through 1st loop; insert hook into 2nd loop, `yo` and pull through; insert hook into 3rd loop, `yo` and pull through (`3` live loops restored). Repeat until cord measures **`r sprintf("%.0f cm", icord_length_cm)`**, then `yo` and pull through all 3 loops at once. Fasten off.
+   - Repeat identically at the **left collarbone corner**.
+2. **Wet-Blocking Dimensions & Corset Lacing:**
+   - Soak the finished cotton halter in cool water with mild no-rinse wash for 15 minutes; gently squeeze in a towel without wringing.
+   - Pin flat to a blocking mat to exact target geometry:
+     - **Total Ribbed Band:** `r sprintf("%.1f cm", band_total_length_cm)` $\times$ `r sprintf("%.1f cm", band_height_cm)` (straight bottom edge, zero dip across the `r sprintf("%.1f cm", 2 * cutout_height_cm)` cutout bridge).
+     - **Inverted-V Cutout:** `r sprintf("%.1f cm", 2 * cutout_height_cm)` base $\times$ `r sprintf("%.1f cm", cutout_height_cm)` apex height (`90°` inner peak).
+     - **Front Rib Baseline:** `r sprintf("%.1f cm", front_width_cm)` between underarm markers.
+     - **Body Height (above band to flat collar):** `r sprintf("%.1f cm", body_height_cm)`.
+     - **Blunted Collar Width:** `r sprintf("%.1f cm", neck_flat_width_cm)`.
+   - Once completely dry, cross the two `r sprintf("%.0f cm", icord_length_cm)` I-cord straps in an **"X"** over the upper back and lace them downward through the 3 pairs of buttonhole eyelets across the `r sprintf("%.0f cm", back_gap_cm)` back corset gap, tying a bow at the lower back.
+

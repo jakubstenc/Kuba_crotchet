@@ -1,0 +1,108 @@
+---
+title: "Sternum Keyhole Vest (Size M Mens)"
+date: "2026-05-26"
+format: 
+  html:
+    toc: true
+    fig-width: 8
+    fig-height: 7
+execute: 
+  echo: false
+  warning: false
+---
+
+## Structural Visualization
+
+This grid maps a 50cm wide front panel. The lower torso uses breathable Double Crochet (DC), while the chest and straps transition to dense Half Double Crochet (HDC) to support the geometric cutout at the sternum.
+
+```{r}
+#| label: mens-vest-map
+library(ggplot2)
+library(dplyr)
+
+# Measurements: Size M Male Front Panel
+# Width: 100 stitches (~50 cm)
+# Height: 45 rows (Cropped/High-hip fit)
+
+grid <- expand.grid(Stitch = 1:100, Row = 1:45)
+
+grid <- grid %>%
+  mutate(
+    # 1. Define the physical shape of the vest
+    Part = case_when(
+      Row <= 20 ~ "Lower Torso",
+      
+      # The Sternum Cutout (24-stitch / ~12cm gap)
+      Row >= 21 & Row <= 32 & Stitch <= 38 ~ "Mid Chest (Left)",
+      Row >= 21 & Row <= 32 & Stitch >= 63 ~ "Mid Chest (Right)",
+      
+      # The Upper Chest Bridge
+      Row >= 33 & Row <= 36 & Stitch >= 1 & Stitch <= 100 ~ "Upper Chest Bridge",
+      
+      # The Neck/Shoulder Straps (Armpits taper inward by 2 stitches per row)
+      Row >= 37 & Stitch >= (1 + (Row-36)*2) & Stitch <= 30 ~ "Left Strap",
+      Row >= 37 & Stitch >= 71 & Stitch <= (100 - (Row-36)*2) ~ "Right Strap",
+      
+      TRUE ~ "Empty Space"
+    ),
+    
+    # 2. Define the stitch density for structural integrity
+    Stitch_Type = case_when(
+      Part == "Empty Space" ~ NA_character_,
+      Row <= 20 ~ "Standard DC (Breathable)",
+      TRUE ~ "Dense HDC (Structure)"
+    )
+  ) %>%
+  filter(!is.na(Stitch_Type))
+
+# Plotting the map
+ggplot(grid, aes(x = Stitch, y = Row, fill = Stitch_Type)) +
+  geom_tile(color = "white", linewidth = 0.2) +
+  scale_fill_manual(values = c(
+    "Standard DC (Breathable)" = "#7F8C8D", # Slate grey for lower mesh
+    "Dense HDC (Structure)" = "#2C3E50"      # Dark navy/black for solid chest
+  )) +
+  theme_minimal() +
+  coord_fixed(ratio = 0.85) + # Adjusted for mixed stitch heights
+  labs(
+    title = "Stitch Map: Mens Sternum Keyhole Vest",
+    subtitle = "Size: M | Base: 100 sts",
+    x = "Stitch Count (Width: 100 sts = ~50cm)", 
+    y = "Row Count"
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+```
+
+## The Written Pattern
+
+**Hook:** 3.00mm with Cotton Yarn.  
+**Note on construction:** The back is left completely open. You will weave long chains through the outer edges of the side panels to lace it up your back.
+
+### Part 1: The Lower Torso
+
+*   Chain 102 (100 base stitches + 2 turning chains).
+*   **Rows 1 - 20:** Double Crochet (DC) across all 100 stitches. (Chain 2 to turn at the end of each row).
+
+### Part 2: The Sternum Cutout (Sides)
+Here you transition to Half Double Crochet (HDC) for structure. We build the left side of the window, cut the yarn, and then build the right side.
+
+*   **Rows 21 - 32 (Left Side):** HDC across the first 38 stitches. Chain 1 and turn. Repeat until Row 32. Fasten off.
+*   **Rows 21 - 32 (Right Side):** Skip the middle 24 stitches (this is your sternum window). Attach yarn at stitch 63. HDC across the remaining 38 stitches. Chain 1 and turn. Repeat until Row 32. Fasten off.
+
+### Part 3: The Upper Chest Bridge
+
+*   **Row 33:** Re-attach yarn at the start of the row (Stitch 1). HDC across the first 38 stitches of the left side. Chain 24 to bridge the gap. HDC across the 38 stitches of the right side. (100 total stitches/chains).
+*   **Rows 34 - 36:** HDC across all 100 stitches (working directly into the 24 chains when you cross the middle).
+
+### Part 4: The Straps
+These taper sharply at the armpits to create an athletic, masculine shoulder profile.
+
+*   **Left Strap (Rows 37 - 45):** Work across the first 30 stitches. On every row, decrease (DEC) two times at the armpit edge (the outer edge, near Stitch 1). The inner edge (near Stitch 30) stays straight. Fasten off at Row 45.
+*   **Right Strap (Rows 37 - 45):** Attach yarn at Stitch 71. Work to the end (Stitch 100). On every row, decrease (DEC) two times at the armpit edge (Stitch 100). The inner edge (near Stitch 71) stays straight. Fasten off at Row 45.
+
+### Finishing:
+Create a 200+ chain string. Lace it up the back in an "X" corset pattern, tying it at the lower back.

@@ -11,6 +11,8 @@ website:
         text: Home
       - href: projects/
         text: Patterns
+      - href: chevron-cutout-halter.qmd
+        text: Chevron Cutout Halter
       - href: vocabulary.qmd
         text: Vocabulary
 
